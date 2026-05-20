@@ -48,29 +48,29 @@ After connecting the server, just chat with Claude:
 You: Liste minhas posições agrupadas por classe de ativo.
 
 Claude (using xp-mcp.get_positions):
-  TESOURO (53.13%)        R$ 16,635.25
-    • Tesouro Selic 2031  R$ 14,548.84
-    • Tesouro Selic 2028  R$  2,086.41
+  TESOURO (53.28%)        R$ 16,644.31
+    • Tesouro Selic 2031  R$ 14,556.80
+    • Tesouro Selic 2028  R$  2,087.51
 
-  RENDA_FIXA_PRIVADA (20.91%)  R$  6,550.72
-    • CDB BANCO XP - AGO/2026 - 15,00%       R$ 2,202.62
-    • CDB BANCO XP - SET/2026 - 14,95%       R$ 2,195.88
-    • CDB BANCO XP - OUT/2026 - 14,55%       R$ 1,083.05
-    • CDB BANCO XP - NOV/2027 - 100,00% CDI  R$ 1,069.17
+  RENDA_FIXA_PRIVADA (20.98%)  R$  6,554.32
+    • CDB BANCO XP - AGO/2026 - 15,00%       R$ 2,203.85
+    • CDB BANCO XP - SET/2026 - 14,95%       R$ 2,197.10
+    • CDB BANCO XP - OUT/2026 - 14,55%       R$ 1,083.63
+    • CDB BANCO XP - NOV/2027 - 100,00% CDI  R$ 1,069.74
 
-  FUNDO  (10.45%)  R$  3,271.92
-  ACAO   ( 7.63%)  R$  2,387.84  (BBAS3)
-  FII    ( 7.87%)  R$  2,465.15  (GTWR11, MXRF11)
+  FUNDO  (10.48%)  R$  3,273.71
+  ACAO   ( 7.44%)  R$  2,325.12  (BBAS3)
+  FII    ( 7.81%)  R$  2,439.20  (MXRF11, GTWR11)
 
-  Total: R$ 31,310.88
+  Total: R$ 31,236.66
 
 You: Quais CDBs vencem em 2026?
 
 Claude (filters by asset_class + maturity_date):
   3 CDBs maturing in 2026:
-    • Aug/2026 — 15.00% pre-fixed     R$ 2,202.62
-    • Sep/2026 — 14.95% pre-fixed     R$ 2,195.88
-    • Oct/2026 — 14.55% pre-fixed     R$ 1,083.05
+    • Aug/2026 — 15.00% pre-fixed     R$ 2,203.85
+    • Sep/2026 — 14.95% pre-fixed     R$ 2,197.10
+    • Oct/2026 — 14.55% pre-fixed     R$ 1,083.63
   All issued by BANCO XP S.A. (within single-issuer FGC limit ✓)
 
 You: Estou bem alocado em relação ao meu target?
@@ -80,15 +80,18 @@ Claude (using xp-mcp.calculate_allocation_drift):
   15% Ações, 5% ETF, 5% Fundos, tolerância ±2pp).
 
   Mais fora do alvo:
-    • TESOURO:  53.13%  (target 40%)  → vender ~R$ 4.111
-    • FII:       7.87%  (target 15%)  → comprar ~R$ 2.231
-    • ETF:       0.00%  (target  5%)  → comprar ~R$ 1.566
+    • TESOURO:  53.28%  (target 40%)  → vender ~R$ 4.148
+    • ACAO:      7.44%  (target 15%)  → comprar ~R$ 2.362
+    • FII:       7.81%  (target 15%)  → comprar ~R$ 2.247
 
   Dentro da banda:
-    • RENDA_FIXA_PRIVADA: 20.91% (target 20%) ✓
-    • ACAO:                7.63% (target 15%) — fora da banda mas perto
+    • RENDA_FIXA_PRIVADA: 20.98% (target 20%) ✓
 
-  Net rebalance: R$ 0,00 (sane).
+  Fora da banda, magnitude menor:
+    • FUNDO: 10.48% (target  5%) — vender ~R$ 1.712
+    • ETF:    0.00% (target  5%) — comprar ~R$ 1.562
+
+  Net rebalance: -R$ 152 (aporte pequeno sugerido pra fechar).
 ```
 
 ---
@@ -223,7 +226,7 @@ You should see the server announce itself and list the three working tools.
 
 ## Project layout
 
-```
+```text
 src/
 ├── index.ts                       # MCP server entrypoint (stdio transport)
 ├── tools/
@@ -247,7 +250,7 @@ src/
 
 ## Data model
 
-```
+```text
 imports        every parse attempt with row counts, timestamps, source path
 positions      one row per (asset_class, external_id); upserted on re-import
 transactions   buys/sells from broker notes (phase 2)
