@@ -8,6 +8,7 @@
 [![Node.js](https://img.shields.io/badge/Node.js-20%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![MCP](https://img.shields.io/badge/MCP-2024--11--05-FF6B6B)](https://modelcontextprotocol.io/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+[![npm](https://img.shields.io/npm/v/xp-investimentos-mcp)](https://www.npmjs.com/package/xp-investimentos-mcp)
 [![Status](https://img.shields.io/badge/status-MVP-yellow)](#roadmap)
 
 </div>
@@ -137,49 +138,30 @@ Claude (using xp-mcp.calculate_allocation_drift):
 
 ---
 
-## Quick start
+## Quick Start
 
-Requirements: **Node.js ≥ 20**.
-
-```bash
-git clone https://github.com/Satsuj1n/xp-mcp.git
-cd xp-mcp
-npm install
-npm run build
-```
-
-Then register the server with Claude Desktop. Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS):
+Add this to your `claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
-    "xp": {
-      "command": "node",
-      "args": ["/absolute/path/to/xp-mcp/dist/index.js"]
+    "xp-investimentos": {
+      "command": "npx",
+      "args": ["-y", "xp-investimentos-mcp"]
     }
   }
 }
 ```
 
-Restart Claude Desktop (Cmd+Q, not just close the window). Open a new chat — the 🔌 icon at the bottom should show `xp` connected with 3 tools.
+Config file location:
 
-> **Tip:** Use the absolute path to your `node` binary if Claude Desktop can't find it (`which node` in your shell). The desktop app doesn't inherit your `$PATH`.
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+- Linux: `~/.config/Claude/claude_desktop_config.json`
 
-### Custom DB path
+Restart Claude Desktop. Done.
 
-Useful for separating dev/prod data:
-
-```json
-{
-  "mcpServers": {
-    "xp": {
-      "command": "node",
-      "args": ["/absolute/path/to/xp-mcp/dist/index.js"],
-      "env": { "XP_MCP_DB_PATH": "/path/to/custom/data.db" }
-    }
-  }
-}
-```
+See [Development](#development) below for clone + build instructions if you want to hack on the server.
 
 ---
 
@@ -289,9 +271,47 @@ The `UNIQUE (asset_class, external_id)` constraint + `ON CONFLICT DO UPDATE` mak
 - [ ] `import_nota_corretagem` (broker-note PDF → transactions)
 - [ ] CSV parser for proventos export
 - [x] `calculate_allocation_drift` against `~/.xp-mcp/allocation.json`
+- [x] v0.3 — npm publish + Smithery + awesome-mcp PR
 - [ ] Optional opt-in price fetching (B3 / brapi.dev / Yahoo)
 - [ ] Adapters for other Brazilian brokers (Rico, NuInvest, Inter, Avenue)
 - [ ] Open Finance Brasil investment module when the standard matures
+
+---
+
+## Development
+
+For contributors or anyone who wants to run a local checkout instead of the published npm package:
+
+```bash
+git clone https://github.com/Satsuj1n/xp-mcp
+cd xp-mcp
+npm install
+npm run build
+npm run test
+```
+
+Then point `claude_desktop_config.json` at the local build:
+
+```json
+{
+  "mcpServers": {
+    "xp-investimentos": {
+      "command": "node",
+      "args": ["/absolute/path/to/xp-mcp/dist/index.js"]
+    }
+  }
+}
+```
+
+Run the type checker with `npm run typecheck`. Smoke-test the MCP server end-to-end with:
+
+```bash
+node dist/index.js <<'EOF'
+{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"local","version":"0.0.0"}}}
+{"jsonrpc":"2.0","method":"notifications/initialized"}
+{"jsonrpc":"2.0","id":2,"method":"tools/list"}
+EOF
+```
 
 ---
 
