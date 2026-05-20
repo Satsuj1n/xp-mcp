@@ -72,6 +72,23 @@ Claude (filters by asset_class + maturity_date):
     • Sep/2026 — 14.95% pre-fixed     R$ 2,195.88
     • Oct/2026 — 14.55% pre-fixed     R$ 1,083.05
   All issued by BANCO XP S.A. (within single-issuer FGC limit ✓)
+
+You: Estou bem alocado em relação ao meu target?
+
+Claude (using xp-mcp.calculate_allocation_drift):
+  Lendo ~/.xp-mcp/allocation.json (target: 40% Tesouro, 20% RF, 15% FII,
+  15% Ações, 5% ETF, 5% Fundos, tolerância ±2pp).
+
+  Mais fora do alvo:
+    • TESOURO:  53.13%  (target 40%)  → vender ~R$ 4.111
+    • FII:       7.87%  (target 15%)  → comprar ~R$ 2.231
+    • ETF:       0.00%  (target  5%)  → comprar ~R$ 1.566
+
+  Dentro da banda:
+    • RENDA_FIXA_PRIVADA: 20.91% (target 20%) ✓
+    • ACAO:                7.63% (target 15%) — fora da banda mas perto
+
+  Net rebalance: R$ 0,00 (sane).
 ```
 
 ---
@@ -112,7 +129,7 @@ Claude (filters by asset_class + maturity_date):
 | `get_portfolio_summary`       | Aggregate stats + declared-vs-computed reconciliation gap                              |   ⏳   |
 | `get_transactions`            | History of buys/sells                                                                  |   ⏳   |
 | `get_dividends`               | Income / proventos                                                                     |   ⏳   |
-| `calculate_allocation_drift`  | Compare current vs target allocation from `~/.xp-mcp/allocation.json`                  |   ⏳   |
+| `calculate_allocation_drift`  | Compare current vs target allocation from `~/.xp-mcp/allocation.json`. Returns drift %, BRL delta, and BUY/SELL suggestions per class. |   ✅   |
 | `import_nota_corretagem`      | Parse broker-note PDFs for transaction history                                         |   ⏳   |
 
 ---
@@ -174,6 +191,17 @@ XP has no single *"export everything"* button. Try in this order:
 5. **Extrato de movimentação** — Conta → Extrato → filtrar período → Exportar
 
 The CSV parser auto-detects `;`, `,`, `\t`, `|` delimiters and fuzzy-matches common XP column names (`Quantidade`, `Qtd`, `Preço médio`, `Valor aplicado`, ...). If a column is missed, extend `HEADER_ALIASES` in `src/parsers/csv-extract.ts`.
+
+### Configuring your target allocation
+
+`calculate_allocation_drift` reads `~/.xp-mcp/allocation.json`. A starter file is included at [`examples/allocation.example.json`](./examples/allocation.example.json). Copy it once and edit the percentages:
+
+```bash
+mkdir -p ~/.xp-mcp
+cp examples/allocation.example.json ~/.xp-mcp/allocation.json
+```
+
+The six valid keys are `TESOURO`, `RENDA_FIXA_PRIVADA`, `FII`, `ETF`, `ACAO`, `FUNDO`. Values must sum to `1.00` (±0.001). `tolerance_pp` is optional — when set, drifts within the band are reported as `"ok"` with no action.
 
 ---
 
@@ -257,7 +285,7 @@ The `UNIQUE (asset_class, external_id)` constraint + `ON CONFLICT DO UPDATE` mak
 - [ ] `get_portfolio_summary` with declared-vs-computed reconciliation gap
 - [ ] `import_nota_corretagem` (broker-note PDF → transactions)
 - [ ] CSV parser for proventos export
-- [ ] `calculate_allocation_drift` against `~/.xp-mcp/allocation.json`
+- [x] `calculate_allocation_drift` against `~/.xp-mcp/allocation.json`
 - [ ] Optional opt-in price fetching (B3 / brapi.dev / Yahoo)
 - [ ] Adapters for other Brazilian brokers (Rico, NuInvest, Inter, Avenue)
 - [ ] Open Finance Brasil investment module when the standard matures

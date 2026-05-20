@@ -42,4 +42,5 @@ jobs:
           echo "$OUTPUT"
           echo "$OUTPUT" | grep -q '"name":"get_positions"' || (echo "Smoke test failed — get_positions not registered" && exit 1)
           echo "$OUTPUT" | grep -q '"name":"import_xperformance_pdf"' || (echo "Smoke test failed — import_xperformance_pdf not registered" && exit 1)
-          echo "All 3 tools registered correctly"
+          echo "$OUTPUT" | grep -q '"name":"calculate_allocation_drift"' || (echo "Smoke test failed — calculate_allocation_drift not registered" && exit 1)
+          echo "All 4 tools registered correctly"
