@@ -15,6 +15,10 @@ import {
   importXperformancePdfSchema,
 } from "./tools/import-xperformance-pdf.js";
 import { getPositions, getPositionsSchema } from "./tools/get-positions.js";
+import {
+  calculateAllocationDrift,
+  calculateAllocationDriftSchema,
+} from "./tools/calculate-allocation-drift.js";
 
 /**
  * Tool registry. Adding a new tool = adding one entry here.
@@ -46,6 +50,15 @@ const TOOLS = {
       "and unrealized P&L. Values in BRL (Brazilian Reais).",
     schema: getPositionsSchema,
     handler: getPositions,
+  },
+  calculate_allocation_drift: {
+    description:
+      "Compare current portfolio allocation against a target defined in ~/.xp-mcp/allocation.json. " +
+      "Returns per-class drift in percentage points and BRL, with suggested BUY/SELL actions to rebalance. " +
+      "Optional 'target_path' argument overrides the default location. " +
+      "Optional 'tolerance_pp' field in the JSON treats drifts within the band as 'ok' (no action).",
+    schema: calculateAllocationDriftSchema,
+    handler: calculateAllocationDrift,
   },
 } as const;
 
