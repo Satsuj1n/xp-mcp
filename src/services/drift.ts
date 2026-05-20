@@ -148,7 +148,12 @@ export function computeDrift(
     if (r.action?.side === "SELL") net += r.action.amount_brl;
     if (r.action?.side === "BUY") net -= r.action.amount_brl;
   }
-  if (Math.abs(net) > 0.02) {
+  // net ≈ 0 is only expected when every drift drives an action. If any row is
+  // "ok" (drift within tolerance), its imbalance is intentionally absorbed and
+  // net legitimately diverges from zero. Only warn if no ok-state row could
+  // account for the gap.
+  const allRowsHaveAction = rows.every((r) => r.action !== null);
+  if (allRowsHaveAction && Math.abs(net) > 0.02) {
     warnings.push(
       `rebalance_net_brl is ${net.toFixed(2)} (expected ≈ 0; math bug suspected)`,
     );
