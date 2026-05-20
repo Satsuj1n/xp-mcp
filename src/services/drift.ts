@@ -110,16 +110,16 @@ export function computeDrift(
 
     const currentPct = totalCents > 0 ? currentCents / totalCents : 0;
     const targetCents = Math.round(targetPct * totalCents);
-    const driftPp = round2((currentPct - targetPct) * 100); // signed, 2dp
+    const driftPpRaw = (currentPct - targetPct) * 100; // signed, full precision
     const deltaCents = currentCents - targetCents; // + → sell, − → buy
 
     let status: DriftRow["status"];
     let action: DriftRow["action"];
 
-    if (Math.abs(driftPp) <= tolerance) {
+    if (Math.abs(driftPpRaw) <= tolerance) {
       status = "ok";
       action = null;
-    } else if (driftPp > 0) {
+    } else if (driftPpRaw > 0) {
       status = "overweight";
       action = { side: "SELL", amount_brl: round2(deltaCents / 100) };
     } else {
@@ -133,7 +133,7 @@ export function computeDrift(
       current_pct: currentPct,
       target_pct: targetPct,
       target_brl: round2(targetCents / 100),
-      drift_pp: driftPp,
+      drift_pp: round2(driftPpRaw),
       status,
       action,
     });
