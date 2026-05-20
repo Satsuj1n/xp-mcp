@@ -124,7 +124,7 @@ test("tolerance band: drift just outside → action present", () => {
   const tesouro = r.drift.find((d) => d.asset_class === "TESOURO");
   assert.ok(tesouro);
   assert.equal(tesouro.status, "overweight");
-  assert.ok(tesouro.action);
+  assert.deepEqual(tesouro.action, { side: "SELL", amount_brl: 25 });
 });
 
 test("rebalance_net_brl ≈ 0 across multi-class fixture", () => {
