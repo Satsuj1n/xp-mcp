@@ -1,0 +1,10 @@
+# Smithery configuration — see https://smithery.ai/docs/config
+startCommand:
+  type: stdio
+  command: npx
+  args:
+    - "-y"
+    - xp-investimentos-mcp
+  # No configSchema: server reads ~/.xp-mcp/* on its own;
+  # all tool inputs (file_path, target_path) come per-call,
+  # not via process startup.
