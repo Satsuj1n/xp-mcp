@@ -1,0 +1,11 @@
+{
+  "target_allocation": {
+    "TESOURO": 0.4,
+    "RENDA_FIXA_PRIVADA": 0.2,
+    "FII": 0.15,
+    "ACAO": 0.15,
+    "ETF": 0.05,
+    "FUNDO": 0.05
+  },
+  "tolerance_pp": 2.0
+}
