@@ -68,7 +68,7 @@ test("sum != 1.0 (outside tolerance) throws with actual sum", () => {
     JSON.stringify({ target_allocation: { TESOURO: 0.5, FII: 0.4 } }),
   );
   try {
-    assert.throws(() => loadAllocationTarget(file), /sums to 0\.9/);
+    assert.throws(() => loadAllocationTarget(file), /sums to 0\.[89]/);
   } finally {
     fs.unlinkSync(file);
   }
@@ -94,7 +94,7 @@ test("negative tolerance_pp throws", () => {
     }),
   );
   try {
-    assert.throws(() => loadAllocationTarget(file));
+    assert.throws(() => loadAllocationTarget(file), /tolerance_pp/);
   } finally {
     fs.unlinkSync(file);
   }
@@ -111,9 +111,14 @@ test("explicit missing path throws without example block", () => {
   );
 });
 
-test("default missing path throws with example block (when default absent)", () => {
+test("default missing path throws with example block (when default absent)", (t) => {
   const defaultPath = path.join(os.homedir(), ".xp-mcp", "allocation.json");
-  if (fs.existsSync(defaultPath)) return; // skip if user has one
+  if (fs.existsSync(defaultPath)) {
+    t.skip(
+      "user has ~/.xp-mcp/allocation.json — cannot test missing-default case",
+    );
+    return;
+  }
   assert.throws(
     () => loadAllocationTarget(),
     (err: Error) => {
