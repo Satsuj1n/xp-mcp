@@ -1,33 +1,34 @@
 {
-  "name": "xp-investimentos-mcp",
+  "name": "portfolio-mcp",
   "version": "0.3.0",
-  "description": "Local, read-only MCP server for personal XP Investimentos portfolio analysis",
+  "description": "Local-first MCP server for personal investment portfolio analysis. Currently supports XP Investimentos; adapter-ready for Rico, NuInvest, Inter, Avenue, and crypto exchanges.",
   "license": "MIT",
   "author": "Felipe Lima",
-  "homepage": "https://github.com/Satsuj1n/xp-mcp#readme",
+  "homepage": "https://github.com/Satsuj1n/portfolio-mcp#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Satsuj1n/xp-mcp.git"
+    "url": "git+https://github.com/Satsuj1n/portfolio-mcp.git"
   },
   "bugs": {
-    "url": "https://github.com/Satsuj1n/xp-mcp/issues"
+    "url": "https://github.com/Satsuj1n/portfolio-mcp/issues"
   },
   "keywords": [
     "mcp",
     "model-context-protocol",
     "claude",
     "claude-desktop",
-    "xp-investimentos",
-    "xp",
     "portfolio",
     "investments",
     "finance",
     "brazil",
+    "xp-investimentos",
+    "xp",
+    "crypto",
     "stdio"
   ],
   "type": "module",
   "bin": {
-    "xp-investimentos-mcp": "./dist/index.js"
+    "portfolio-mcp": "./dist/index.js"
   },
   "files": [
     "dist",

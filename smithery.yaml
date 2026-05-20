@@ -4,7 +4,7 @@ startCommand:
   command: npx
   args:
     - "-y"
-    - xp-investimentos-mcp
+    - portfolio-mcp
   # No configSchema: server reads ~/.xp-mcp/* on its own;
   # all tool inputs (file_path, target_path) come per-call,
   # not via process startup.

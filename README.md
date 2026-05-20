@@ -8,7 +8,7 @@
 [![Node.js](https://img.shields.io/badge/Node.js-20%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![MCP](https://img.shields.io/badge/MCP-2024--11--05-FF6B6B)](https://modelcontextprotocol.io/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
-[![npm](https://img.shields.io/npm/v/xp-investimentos-mcp)](https://www.npmjs.com/package/xp-investimentos-mcp)
+[![npm](https://img.shields.io/npm/v/portfolio-mcp)](https://www.npmjs.com/package/portfolio-mcp)
 [![Status](https://img.shields.io/badge/status-MVP-yellow)](#roadmap)
 
 </div>
@@ -48,7 +48,7 @@ After connecting the server, just chat with Claude:
 ```text
 You: Liste minhas posições agrupadas por classe de ativo.
 
-Claude (using xp-mcp.get_positions):
+Claude (using portfolio-mcp.get_positions):
   TESOURO (53.28%)        R$ 16,644.31
     • Tesouro Selic 2031  R$ 14,556.80
     • Tesouro Selic 2028  R$  2,087.51
@@ -76,7 +76,7 @@ Claude (filters by asset_class + maturity_date):
 
 You: Estou bem alocado em relação ao meu target?
 
-Claude (using xp-mcp.calculate_allocation_drift):
+Claude (using portfolio-mcp.calculate_allocation_drift):
   Lendo ~/.xp-mcp/allocation.json (target: 40% Tesouro, 20% RF, 15% FII,
   15% Ações, 5% ETF, 5% Fundos, tolerância ±2pp).
 
@@ -145,9 +145,9 @@ Add this to your `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
-    "xp-investimentos": {
+    "portfolio": {
       "command": "npx",
-      "args": ["-y", "xp-investimentos-mcp"]
+      "args": ["-y", "portfolio-mcp"]
     }
   }
 }
@@ -283,7 +283,7 @@ The `UNIQUE (asset_class, external_id)` constraint + `ON CONFLICT DO UPDATE` mak
 For contributors or anyone who wants to run a local checkout instead of the published npm package:
 
 ```bash
-git clone https://github.com/Satsuj1n/xp-mcp
+git clone https://github.com/Satsuj1n/portfolio-mcp
 cd xp-mcp
 npm install
 npm run build
@@ -295,9 +295,9 @@ Then point `claude_desktop_config.json` at the local build:
 ```json
 {
   "mcpServers": {
-    "xp-investimentos": {
+    "portfolio": {
       "command": "node",
-      "args": ["/absolute/path/to/xp-mcp/dist/index.js"]
+      "args": ["/absolute/path/to/portfolio-mcp/dist/index.js"]
     }
   }
 }
