@@ -40,6 +40,7 @@ jobs:
           EOF
           )
           echo "$OUTPUT" | grep -q '"name":"get_positions"' || { echo "Smoke test failed: get_positions not in tools/list"; exit 1; }
+          echo "$OUTPUT" | grep -q '"name":"import_xperformance_pdf"' || { echo "Smoke test failed: import_xperformance_pdf not in tools/list"; exit 1; }
           echo "$OUTPUT" | grep -q '"name":"calculate_allocation_drift"' || { echo "Smoke test failed: calculate_allocation_drift not in tools/list"; exit 1; }
 
       - name: Publish to npm
