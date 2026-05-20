@@ -1,14 +1,42 @@
 {
-  "name": "xp-mcp",
-  "version": "0.2.0",
+  "name": "xp-investimentos-mcp",
+  "version": "0.3.0",
   "description": "Local, read-only MCP server for personal XP Investimentos portfolio analysis",
-  "private": true,
+  "license": "MIT",
+  "author": "Felipe Lima",
+  "homepage": "https://github.com/Satsuj1n/xp-mcp#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Satsuj1n/xp-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Satsuj1n/xp-mcp/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "claude",
+    "claude-desktop",
+    "xp-investimentos",
+    "xp",
+    "portfolio",
+    "investments",
+    "finance",
+    "brazil",
+    "stdio"
+  ],
   "type": "module",
   "bin": {
-    "xp-mcp": "./dist/index.js"
+    "xp-investimentos-mcp": "./dist/index.js"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
+    "prepublishOnly": "npm run typecheck && npm run build",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
     "typecheck": "tsc --noEmit",
