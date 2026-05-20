@@ -10,6 +10,8 @@ const DEFAULT_TARGET_PATH = path.join(
   "allocation.json",
 );
 
+// Keep in sync with ASSET_CLASSES — used in the error shown when the default
+// allocation file is missing, to give the user a copy-pasteable starting point.
 const MISSING_FILE_EXAMPLE = `{
   "target_allocation": {
     "TESOURO": 0.40,
@@ -22,15 +24,15 @@ const MISSING_FILE_EXAMPLE = `{
   "tolerance_pp": 2.0
 }`;
 
+// Build the strict zod object from ASSET_CLASSES so adding a new class in
+// storage/schema.ts automatically extends validation here. The only place
+// that still has to be kept in sync manually is MISSING_FILE_EXAMPLE below.
 const targetAllocationSchema = z
-  .object({
-    TESOURO: z.number().min(0).max(1).optional(),
-    RENDA_FIXA_PRIVADA: z.number().min(0).max(1).optional(),
-    FII: z.number().min(0).max(1).optional(),
-    ETF: z.number().min(0).max(1).optional(),
-    ACAO: z.number().min(0).max(1).optional(),
-    FUNDO: z.number().min(0).max(1).optional(),
-  })
+  .object(
+    Object.fromEntries(
+      ASSET_CLASSES.map((cls) => [cls, z.number().min(0).max(1).optional()]),
+    ) as Record<AssetClass, z.ZodOptional<z.ZodNumber>>,
+  )
   .strict()
   .refine(
     (alloc) => {
@@ -51,6 +53,10 @@ const targetAllocationSchema = z
     },
   );
 
+// fullSchema is .passthrough() so users can add forward-compatible top-level
+// fields (e.g. "$comment", "rebalance_strategy") without rejection. The inner
+// targetAllocationSchema is .strict() because misspelled asset_class keys
+// should fail loudly — see checkKeys() for the friendlier error message.
 const fullSchema = z
   .object({
     target_allocation: targetAllocationSchema,
