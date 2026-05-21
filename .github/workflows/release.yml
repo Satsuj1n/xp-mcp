@@ -39,9 +39,14 @@ jobs:
           {"jsonrpc":"2.0","id":2,"method":"tools/list"}
           EOF
           )
-          echo "$OUTPUT" | grep -q '"name":"get_positions"' || { echo "Smoke test failed: get_positions not in tools/list"; exit 1; }
-          echo "$OUTPUT" | grep -q '"name":"import_xperformance_pdf"' || { echo "Smoke test failed: import_xperformance_pdf not in tools/list"; exit 1; }
-          echo "$OUTPUT" | grep -q '"name":"calculate_allocation_drift"' || { echo "Smoke test failed: calculate_allocation_drift not in tools/list"; exit 1; }
+          echo "$OUTPUT" | grep -q '"name":"get_positions"'              || { echo "Smoke failed: get_positions not in tools/list"; exit 1; }
+          echo "$OUTPUT" | grep -q '"name":"import_xperformance_pdf"'    || { echo "Smoke failed: import_xperformance_pdf not in tools/list"; exit 1; }
+          echo "$OUTPUT" | grep -q '"name":"import_extract_csv"'         || { echo "Smoke failed: import_extract_csv not in tools/list"; exit 1; }
+          echo "$OUTPUT" | grep -q '"name":"calculate_allocation_drift"' || { echo "Smoke failed: calculate_allocation_drift not in tools/list"; exit 1; }
+          echo "$OUTPUT" | grep -q '"name":"set_advisor_profile"'        || { echo "Smoke failed: set_advisor_profile not in tools/list"; exit 1; }
+          echo "$OUTPUT" | grep -q '"name":"get_advisor_profile"'        || { echo "Smoke failed: get_advisor_profile not in tools/list"; exit 1; }
+          echo "$OUTPUT" | grep -q '"name":"get_market_data"'            || { echo "Smoke failed: get_market_data not in tools/list"; exit 1; }
+          echo "$OUTPUT" | grep -q '"name":"screen_assets"'              || { echo "Smoke failed: screen_assets not in tools/list"; exit 1; }
 
       - name: Publish to npm
         run: npm publish --provenance --access public

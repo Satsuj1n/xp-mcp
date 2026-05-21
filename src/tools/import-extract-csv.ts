@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { resolve } from "node:path";
 import { statSync } from "node:fs";
-import { parseExtractCsv } from "../parsers/csv-extract.js";
+import { parseExtractCsv } from "../adapters/xp/csv-extract.js";
 import { getDb } from "../storage/db.js";
 import {
   createImportRecord,

@@ -1,0 +1,12 @@
+{
+  "results": [
+    {
+      "symbol": "BBAS3",
+      "regularMarketPrice": 30.42,
+      "regularMarketChangePercent": -0.85,
+      "regularMarketVolume": 12345678,
+      "marketCap": 86200000000,
+      "regularMarketTime": "2026-05-20T20:00:00.000Z"
+    }
+  ]
+}

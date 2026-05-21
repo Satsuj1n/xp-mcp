@@ -89,6 +89,17 @@ const DDL_STATEMENTS: readonly string[] = [
 
   `CREATE INDEX IF NOT EXISTS idx_dividends_asset ON dividends(asset_class, external_id)`,
   `CREATE INDEX IF NOT EXISTS idx_dividends_date  ON dividends(pay_date)`,
+
+  `CREATE TABLE IF NOT EXISTS market_data_cache (
+     ticker        TEXT NOT NULL,
+     data_type     TEXT NOT NULL,
+     source        TEXT NOT NULL DEFAULT 'brapi.dev',
+     payload_json  TEXT NOT NULL,
+     cached_at     TEXT NOT NULL DEFAULT (datetime('now')),
+     PRIMARY KEY (ticker, data_type, source)
+   )`,
+
+  `CREATE INDEX IF NOT EXISTS idx_mdc_cached_at ON market_data_cache(cached_at)`,
 ];
 
 export function applySchema(db: Database): void {

@@ -40,7 +40,12 @@ jobs:
           EOF
           )
           echo "$OUTPUT"
-          echo "$OUTPUT" | grep -q '"name":"get_positions"' || (echo "Smoke test failed — get_positions not registered" && exit 1)
-          echo "$OUTPUT" | grep -q '"name":"import_xperformance_pdf"' || (echo "Smoke test failed — import_xperformance_pdf not registered" && exit 1)
-          echo "$OUTPUT" | grep -q '"name":"calculate_allocation_drift"' || (echo "Smoke test failed — calculate_allocation_drift not registered" && exit 1)
-          echo "All 4 tools registered correctly"
+          echo "$OUTPUT" | grep -q '"name":"get_positions"'             || { echo "Smoke failed: get_positions not registered"; exit 1; }
+          echo "$OUTPUT" | grep -q '"name":"import_xperformance_pdf"'   || { echo "Smoke failed: import_xperformance_pdf not registered"; exit 1; }
+          echo "$OUTPUT" | grep -q '"name":"import_extract_csv"'        || { echo "Smoke failed: import_extract_csv not registered"; exit 1; }
+          echo "$OUTPUT" | grep -q '"name":"calculate_allocation_drift"' || { echo "Smoke failed: calculate_allocation_drift not registered"; exit 1; }
+          echo "$OUTPUT" | grep -q '"name":"set_advisor_profile"'       || { echo "Smoke failed: set_advisor_profile not registered"; exit 1; }
+          echo "$OUTPUT" | grep -q '"name":"get_advisor_profile"'       || { echo "Smoke failed: get_advisor_profile not registered"; exit 1; }
+          echo "$OUTPUT" | grep -q '"name":"get_market_data"'           || { echo "Smoke failed: get_market_data not registered"; exit 1; }
+          echo "$OUTPUT" | grep -q '"name":"screen_assets"'             || { echo "Smoke failed: screen_assets not registered"; exit 1; }
+          echo "All 8 tools registered correctly"

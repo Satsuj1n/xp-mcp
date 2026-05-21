@@ -19,6 +19,16 @@ import {
   calculateAllocationDrift,
   calculateAllocationDriftSchema,
 } from "./tools/calculate-allocation-drift.js";
+import {
+  setAdvisorProfile,
+  setAdvisorProfileSchema,
+} from "./tools/set-advisor-profile.js";
+import {
+  getAdvisorProfile,
+  getAdvisorProfileSchema,
+} from "./tools/get-advisor-profile.js";
+import { getMarketData, getMarketDataSchema } from "./tools/get-market-data.js";
+import { screenAssets, screenAssetsSchema } from "./tools/screen-assets.js";
 
 /**
  * Tool registry. Adding a new tool = adding one entry here.
@@ -59,6 +69,39 @@ const TOOLS = {
       "Optional 'tolerance_pp' field in the JSON treats drifts within the band as 'ok' (no action).",
     schema: calculateAllocationDriftSchema,
     handler: calculateAllocationDrift,
+  },
+  set_advisor_profile: {
+    description:
+      "Save (overwrite) the advisor profile at ~/.xp-mcp/advisor-profile.json. " +
+      "Required fields: risk_tolerance (1-10), horizon_years (>0), objective ('income'|'growth'|'balanced'). " +
+      "Optional: outbound_enabled (default false), excluded_classes, excluded_tickers, notes, brapi_token. " +
+      "Enabling outbound_enabled=true requires accept_disclaimer=true on the call.",
+    schema: setAdvisorProfileSchema,
+    handler: setAdvisorProfile,
+  },
+  get_advisor_profile: {
+    description:
+      "Read the advisor profile from ~/.xp-mcp/advisor-profile.json. " +
+      "Returns exists:false when the file is not yet configured; reports schema errors in the errors array.",
+    schema: getAdvisorProfileSchema,
+    handler: getAdvisorProfile,
+  },
+  get_market_data: {
+    description:
+      "Fetch quotes and/or fundamentals from brapi.dev for 1-50 tickers, with SQLite caching. " +
+      "Requires outbound_enabled=true in the advisor profile. Per-ticker partial failures are reported in results[].error " +
+      "without failing the whole call. cache_ttl_minutes overrides the default TTL (60 quote / 1440 fundamentals).",
+    schema: getMarketDataSchema,
+    handler: getMarketData,
+  },
+  screen_assets: {
+    description:
+      "Rank B3 assets (FII | ACAO | ETF) against criteria (sort_by, filters, limit). " +
+      "Fetches the universe and per-ticker quote+fundamentals from brapi.dev (cached). " +
+      "Profile's excluded_classes/excluded_tickers are merged with the call's exclude_tickers. " +
+      "Output is educational analysis, not investment advice.",
+    schema: screenAssetsSchema,
+    handler: screenAssets,
   },
 } as const;
 

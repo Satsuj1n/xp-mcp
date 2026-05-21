@@ -1,12 +1,12 @@
 import pdf from "pdf-parse/lib/pdf-parse.js";
 import { readFileSync } from "node:fs";
-import type { AssetClass } from "../storage/schema.js";
+import type { AssetClass } from "../../storage/schema.js";
 import {
   buildExternalId,
   classifyAsset,
   parseNameMetadata,
-} from "./classify.js";
-import { parseBRLToCents, parseQuantity } from "./normalize.js";
+} from "../../parsers/classify.js";
+import { parseBRLToCents, parseQuantity } from "../../parsers/normalize.js";
 
 /**
  * What one parsed asset row from the XPerformance PDF looks like.

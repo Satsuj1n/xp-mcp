@@ -1,13 +1,13 @@
 import Papa from "papaparse";
 import { readFileSync } from "node:fs";
-import type { AssetClass } from "../storage/schema.js";
-import { classifyAsset } from "./classify.js";
+import type { AssetClass } from "../../storage/schema.js";
+import { classifyAsset } from "../../parsers/classify.js";
 import {
   normalizeHeader,
   parseBRLToCents,
   parseDateBR,
   parseQuantity,
-} from "./normalize.js";
+} from "../../parsers/normalize.js";
 
 /**
  * One row of the normalized extract — what a parsed CSV row becomes

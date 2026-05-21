@@ -1,0 +1,17 @@
+{
+  "results": [
+    {
+      "symbol": "MXRF11",
+      "regularMarketPrice": 10.18,
+      "regularMarketChangePercent": 0.2,
+      "regularMarketVolume": 5432100,
+      "marketCap": 4200000000,
+      "regularMarketTime": "2026-05-20T20:00:00.000Z",
+      "defaultKeyStatistics": {
+        "trailingDividendYield": 0.118,
+        "priceToBook": 0.97
+      },
+      "vacancyRate": 0.04
+    }
+  ]
+}
