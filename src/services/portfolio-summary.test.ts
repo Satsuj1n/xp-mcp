@@ -87,3 +87,40 @@ test("aggregateByClass: class with zero positions having invested → P&L all nu
   assert.equal(out[0]!.unrealized_pl_brl, null);
   assert.equal(out[0]!.unrealized_pl_pct, null);
 });
+
+import { pickTopPositions } from "./portfolio-summary.js";
+
+test("pickTopPositions: returns top n sorted by market_value desc", () => {
+  const positions = [
+    mkPosition("FII", 100000, null, "A"),
+    mkPosition("ACAO", 300000, null, "B"),
+    mkPosition("ETF", 200000, null, "C"),
+  ];
+  const out = pickTopPositions(positions, 2, 600000);
+  assert.equal(out.length, 2);
+  assert.equal(out[0]!.external_id, "B");
+  assert.equal(out[0]!.market_value_brl, 3000);
+  assert.equal(out[0]!.pct_of_total, 0.5);
+  assert.equal(out[1]!.external_id, "C");
+});
+
+test("pickTopPositions: returns fewer than n when positions are fewer", () => {
+  const out = pickTopPositions([mkPosition("FII", 100000)], 5, 100000);
+  assert.equal(out.length, 1);
+});
+
+test("pickTopPositions: ties broken by external_id asc (deterministic)", () => {
+  const out = pickTopPositions(
+    [
+      mkPosition("FII", 100000, null, "Z"),
+      mkPosition("FII", 100000, null, "A"),
+      mkPosition("FII", 100000, null, "M"),
+    ],
+    3,
+    300000,
+  );
+  assert.deepEqual(
+    out.map((p) => p.external_id),
+    ["A", "M", "Z"],
+  );
+});
