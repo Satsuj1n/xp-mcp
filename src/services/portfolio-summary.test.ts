@@ -217,3 +217,75 @@ test("computeFgcCoverage: total zero → covered_pct = 0", () => {
   const out = computeFgcCoverage([], 0);
   assert.equal(out.covered_pct, 0);
 });
+
+import { computeMaturityBuckets } from "./portfolio-summary.js";
+
+function mkMatPos(
+  mv: number,
+  maturity: string | null,
+  cls: AssetClass = "RENDA_FIXA_PRIVADA",
+): PositionRow {
+  return { ...mkPosition(cls, mv), maturity_date: maturity };
+}
+
+test("computeMaturityBuckets: short (<1y), medium (1-3y), long (>3y), no_maturity", () => {
+  const horizon = "2026-05-21";
+  const out = computeMaturityBuckets(
+    [
+      mkMatPos(100000, "2026-08-15"), // ~3 months → short
+      mkMatPos(200000, "2027-08-15"), // ~15 months → medium
+      mkMatPos(300000, "2030-08-15"), // >3 years → long
+      mkMatPos(400000, null, "ACAO"), // no_maturity
+    ],
+    horizon,
+  );
+  assert.equal(out.short_brl, 1000);
+  assert.equal(out.medium_brl, 2000);
+  assert.equal(out.long_brl, 3000);
+  assert.equal(out.no_maturity_brl, 4000);
+  assert.equal(out.short_count, 1);
+  assert.equal(out.medium_count, 1);
+  assert.equal(out.long_count, 1);
+  assert.equal(out.no_maturity_count, 1);
+  assert.equal(out.horizon_from, "2026-05-21");
+});
+
+test("computeMaturityBuckets: past maturity → short bucket", () => {
+  const out = computeMaturityBuckets(
+    [mkMatPos(100000, "2025-01-01")],
+    "2026-05-21",
+  );
+  assert.equal(out.short_brl, 1000);
+  assert.equal(out.short_count, 1);
+});
+
+test("computeMaturityBuckets: malformed maturity → no_maturity bucket", () => {
+  const out = computeMaturityBuckets(
+    [mkMatPos(100000, "not-a-date")],
+    "2026-05-21",
+  );
+  assert.equal(out.no_maturity_brl, 1000);
+  assert.equal(out.no_maturity_count, 1);
+});
+
+test("computeMaturityBuckets: empty positions → all zeros", () => {
+  const out = computeMaturityBuckets([], "2026-05-21");
+  assert.equal(out.short_brl, 0);
+  assert.equal(out.medium_brl, 0);
+  assert.equal(out.long_brl, 0);
+  assert.equal(out.no_maturity_brl, 0);
+});
+
+test("computeMaturityBuckets: exactly-at-boundary edge cases", () => {
+  // 365 days exact = medium (not short)
+  // 365*3 = 1095 days = long (not medium)
+  const out = computeMaturityBuckets(
+    [
+      mkMatPos(100000, "2027-05-21"), // exactly 365 days → medium
+      mkMatPos(200000, "2029-05-21"), // exactly 3y (1095 days) → long
+    ],
+    "2026-05-21",
+  );
+  assert.equal(out.medium_count, 1);
+  assert.equal(out.long_count, 1);
+});

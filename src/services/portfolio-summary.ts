@@ -179,3 +179,76 @@ export function computeFgcCoverage(
     covered_pct: totalCents > 0 ? coveredC / totalCents : 0,
   };
 }
+
+export interface MaturityBuckets {
+  short_brl: number;
+  medium_brl: number;
+  long_brl: number;
+  no_maturity_brl: number;
+  short_count: number;
+  medium_count: number;
+  long_count: number;
+  no_maturity_count: number;
+  horizon_from: string;
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Bucket positions by time-to-maturity from the given horizon date.
+ *   < 1y → short, 1-3y → medium, > 3y → long, null/malformed → no_maturity.
+ * Past-maturity positions land in `short`. The caller is expected to emit
+ * the warning about past/malformed in the orchestrator.
+ */
+export function computeMaturityBuckets(
+  positions: PositionRow[],
+  horizonFromDate: string,
+): MaturityBuckets {
+  const horizonMs = Date.parse(`${horizonFromDate}T00:00:00Z`);
+  let shortC = 0,
+    medC = 0,
+    longC = 0,
+    noC = 0;
+  let shortN = 0,
+    medN = 0,
+    longN = 0,
+    noN = 0;
+  for (const p of positions) {
+    if (p.market_value_cents == null) continue;
+    const mv = p.market_value_cents;
+    if (p.maturity_date == null || !DATE_RE.test(p.maturity_date)) {
+      noC += mv;
+      noN += 1;
+      continue;
+    }
+    const matMs = Date.parse(`${p.maturity_date}T00:00:00Z`);
+    if (Number.isNaN(matMs)) {
+      noC += mv;
+      noN += 1;
+      continue;
+    }
+    const days = (matMs - horizonMs) / DAY_MS;
+    if (days < 365) {
+      shortC += mv;
+      shortN += 1;
+    } else if (days < 365 * 3) {
+      medC += mv;
+      medN += 1;
+    } else {
+      longC += mv;
+      longN += 1;
+    }
+  }
+  return {
+    short_brl: round2(shortC / 100),
+    medium_brl: round2(medC / 100),
+    long_brl: round2(longC / 100),
+    no_maturity_brl: round2(noC / 100),
+    short_count: shortN,
+    medium_count: medN,
+    long_count: longN,
+    no_maturity_count: noN,
+    horizon_from: horizonFromDate,
+  };
+}
