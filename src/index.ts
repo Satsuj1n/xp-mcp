@@ -29,6 +29,10 @@ import {
 } from "./tools/get-advisor-profile.js";
 import { getMarketData, getMarketDataSchema } from "./tools/get-market-data.js";
 import { screenAssets, screenAssetsSchema } from "./tools/screen-assets.js";
+import {
+  getPortfolioSummary,
+  getPortfolioSummarySchema,
+} from "./tools/get-portfolio-summary.js";
 
 /**
  * Tool registry. Adding a new tool = adding one entry here.
@@ -103,14 +107,23 @@ const TOOLS = {
     schema: screenAssetsSchema,
     handler: screenAssets,
   },
+  get_portfolio_summary: {
+    description:
+      "Aggregate stats + reconciliation gap for the portfolio. Returns total market value, " +
+      "per-class breakdown (% and BRL), top 5 positions, total/per-class P&L, FGC coverage, " +
+      "maturity buckets (short/medium/long), and the gap between the declared patrimônio total " +
+      "(from the last XPerformance PDF) vs computed total. Zero outbound HTTP. No inputs.",
+    schema: getPortfolioSummarySchema,
+    handler: getPortfolioSummary,
+  },
 } as const;
 
 type ToolName = keyof typeof TOOLS;
 
 const server = new Server(
   {
-    name: "xp-mcp",
-    version: "0.1.0",
+    name: "portfolio-mcp",
+    version: "0.5.0",
   },
   {
     capabilities: {
@@ -172,7 +185,7 @@ async function main(): Promise<void> {
   await server.connect(transport);
   // No console.log on stdout — that channel is the MCP transport.
   // Log to stderr only.
-  process.stderr.write("xp-mcp server running on stdio\n");
+  process.stderr.write("portfolio-mcp server running on stdio\n");
 }
 
 main().catch((err) => {

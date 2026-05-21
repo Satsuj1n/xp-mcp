@@ -131,13 +131,21 @@ export function createImportRecord(
       | "csv_proventos";
     sourcePath: string;
     totalRows: number;
+    declaredTotalCents?: number | null;
+    referenceDate?: string | null;
   },
 ): number {
   const result = db
     .prepare(
-      "INSERT INTO imports (source_type, source_path, rows_total) VALUES (?, ?, ?)",
+      "INSERT INTO imports (source_type, source_path, rows_total, declared_total_cents, reference_date) VALUES (?, ?, ?, ?, ?)",
     )
-    .run(args.sourceType, args.sourcePath, args.totalRows);
+    .run(
+      args.sourceType,
+      args.sourcePath,
+      args.totalRows,
+      args.declaredTotalCents ?? null,
+      args.referenceDate ?? null,
+    );
   return Number(result.lastInsertRowid);
 }
 

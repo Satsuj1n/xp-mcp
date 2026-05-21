@@ -1,6 +1,7 @@
 import type { AssetClass } from "../storage/schema.js";
 import type { PositionRow } from "../storage/positions-repo.js";
 import type { AllocationTarget } from "../parsers/allocation-target.js";
+import { round2 } from "./money.js";
 
 export interface DriftRow {
   asset_class: AssetClass;
@@ -21,15 +22,6 @@ export interface DriftReport {
   drift: DriftRow[];
   rebalance_net_brl: number;
   warnings: string[];
-}
-
-/**
- * Round to 2 decimals (BRL precision). Math is done in cents; this is
- * used only at the output boundary to avoid IEEE 754 noise like
- * `13.130000000000001`.
- */
-function round2(n: number): number {
-  return Math.round(n * 100) / 100;
 }
 
 /**

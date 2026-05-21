@@ -79,23 +79,22 @@ export async function importXperformancePdf(
     sourceType: "pdf_xperformance",
     sourcePath: filePath,
     totalRows: parsed.total_rows,
+    declaredTotalCents: parsed.patrimonio_total_cents,
+    referenceDate: parsed.reference_date,
   });
 
   const { inserted, updated } = upsertPositions(db, positions, importId);
 
-  const notes = [
-    parsed.reference_date && `reference_date=${parsed.reference_date}`,
-    parsed.patrimonio_total_cents != null &&
-      `patrimonio_total_cents=${parsed.patrimonio_total_cents}`,
-    parsed.warnings.length > 0 && parsed.warnings.slice(0, 10).join("\n"),
-  ]
-    .filter(Boolean)
-    .join("\n");
+  // notes is now reserved for warnings only — declared fields live in dedicated columns.
+  const notes =
+    parsed.warnings.length > 0
+      ? parsed.warnings.slice(0, 10).join("\n")
+      : undefined;
   updateImportCounts(db, importId, {
     imported: inserted,
     updated,
     skipped: parsed.unrecognized_rows,
-    notes: notes.length > 0 ? notes : undefined,
+    notes,
   });
 
   return {
