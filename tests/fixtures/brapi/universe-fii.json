@@ -1,0 +1,7 @@
+{
+  "stocks": [
+    { "stock": "MXRF11", "name": "MAXI RENDA", "type": "fund" },
+    { "stock": "HGLG11", "name": "CSHG LOGISTICA", "type": "fund" },
+    { "stock": "KNRI11", "name": "KINEA RENDA IMOBILIARIA", "type": "fund" }
+  ]
+}

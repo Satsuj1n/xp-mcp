@@ -1,0 +1,7 @@
+{
+  "stocks": [
+    { "stock": "BBAS3", "name": "BANCO DO BRASIL", "type": "stock" },
+    { "stock": "ITUB4", "name": "ITAU UNIBANCO", "type": "stock" },
+    { "stock": "PETR4", "name": "PETROBRAS", "type": "stock" }
+  ]
+}
