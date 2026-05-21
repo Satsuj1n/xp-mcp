@@ -1,6 +1,7 @@
 import { round2 } from "./money.js";
 import type { PositionRow } from "../storage/positions-repo.js";
 import type { AssetClass } from "../storage/schema.js";
+import type { LastDeclaredImport } from "../storage/imports-repo.js";
 
 export interface ByClassRow {
   asset_class: AssetClass;
@@ -110,4 +111,43 @@ export function pickTopPositions(
     pct_of_total:
       totalCents > 0 ? (p.market_value_cents as number) / totalCents : 0,
   }));
+}
+
+export interface Reconciliation {
+  declared_total_brl: number;
+  computed_total_brl: number;
+  gap_brl: number;
+  gap_pct: number;
+  declared_reference_date: string;
+  declared_imported_at: string;
+  declared_source_path: string;
+  is_stale: boolean;
+}
+
+/**
+ * Compares the computed total against the most recent declared import.
+ * `computedAsOf` is an ISO timestamp; only the date portion is compared.
+ * Returns null when `lastDecl` is null.
+ */
+export function computeReconciliation(
+  computedCents: number,
+  computedAsOf: string,
+  lastDecl: LastDeclaredImport | null,
+): Reconciliation | null {
+  if (lastDecl == null) return null;
+  const gapCents = computedCents - lastDecl.declared_total_cents;
+  const gapPct =
+    lastDecl.declared_total_cents !== 0
+      ? gapCents / lastDecl.declared_total_cents
+      : 0;
+  return {
+    declared_total_brl: round2(lastDecl.declared_total_cents / 100),
+    computed_total_brl: round2(computedCents / 100),
+    gap_brl: round2(gapCents / 100),
+    gap_pct: gapPct,
+    declared_reference_date: lastDecl.reference_date,
+    declared_imported_at: lastDecl.imported_at,
+    declared_source_path: lastDecl.source_path,
+    is_stale: lastDecl.reference_date < computedAsOf.slice(0, 10),
+  };
 }

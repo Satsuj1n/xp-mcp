@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { aggregateByClass } from "./portfolio-summary.js";
 import type { PositionRow } from "../storage/positions-repo.js";
 import type { AssetClass } from "../storage/schema.js";
+import { computeReconciliation } from "./portfolio-summary.js";
+import type { LastDeclaredImport } from "../storage/imports-repo.js";
 
 function mkPosition(
   cls: AssetClass,
@@ -123,4 +125,55 @@ test("pickTopPositions: ties broken by external_id asc (deterministic)", () => {
     out.map((p) => p.external_id),
     ["A", "M", "Z"],
   );
+});
+
+const declared: LastDeclaredImport = {
+  id: 1,
+  declared_total_cents: 3125000,
+  reference_date: "2026-05-21",
+  source_path: "/tmp/x.pdf",
+  imported_at: "2026-05-21 10:00:00",
+};
+
+test("computeReconciliation: returns null when lastDecl is null", () => {
+  assert.equal(
+    computeReconciliation(3000000, "2026-05-21T10:00:00", null),
+    null,
+  );
+});
+
+test("computeReconciliation: fresh declared (same date) is not stale", () => {
+  const r = computeReconciliation(3123666, "2026-05-21T10:00:00", declared);
+  assert.ok(r);
+  assert.equal(r!.is_stale, false);
+});
+
+test("computeReconciliation: declared older than computed_as_of is stale", () => {
+  const olderDeclared = { ...declared, reference_date: "2026-05-13" };
+  const r = computeReconciliation(
+    3000000,
+    "2026-05-21T10:00:00",
+    olderDeclared,
+  );
+  assert.equal(r!.is_stale, true);
+});
+
+test("computeReconciliation: gap zero", () => {
+  const r = computeReconciliation(3125000, "2026-05-21T10:00:00", declared);
+  assert.equal(r!.gap_brl, 0);
+  assert.equal(r!.gap_pct, 0);
+});
+
+test("computeReconciliation: gap negative (computed < declared)", () => {
+  const r = computeReconciliation(3000000, "2026-05-21T10:00:00", declared);
+  assert.equal(r!.computed_total_brl, 30000);
+  assert.equal(r!.declared_total_brl, 31250);
+  assert.equal(r!.gap_brl, -1250);
+  assert.ok(r!.gap_pct < 0);
+});
+
+test("computeReconciliation: gap positive (computed > declared)", () => {
+  const r = computeReconciliation(3200000, "2026-05-21T10:00:00", declared);
+  assert.equal(r!.gap_brl, 750);
+  assert.ok(r!.gap_pct > 0);
 });
