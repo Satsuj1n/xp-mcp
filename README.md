@@ -93,6 +93,25 @@ Claude (using portfolio-mcp.calculate_allocation_drift):
     • ETF:    0.00% (target  5%) — comprar ~R$ 1.562
 
   Net rebalance: -R$ 152 (aporte pequeno sugerido pra fechar).
+
+You: Me dá um panorama do meu portfólio.
+
+Claude (using portfolio-mcp.get_portfolio_summary):
+  Total: R$ 31.236,66 (12 posições, ref. 2026-05-21)
+  P&L: +R$ 2.736,66 (+9,60% sobre R$ 28.500 investidos · 8/12 com P&L computável)
+
+  Por classe:
+    TESOURO              53,28%  R$ 16.644,31
+    RENDA_FIXA_PRIVADA   20,98%  R$  6.554,32  (+4,04%)
+    FUNDO                10,48%  R$  3.273,71
+    ACAO                  7,44%  R$  2.325,12
+    FII                   7,81%  R$  2.439,20
+
+  FGC: R$ 6.554,32 (20,98%) cobertos
+  Vencimentos: curto R$ 5.484 · médio R$ 16.625 · longo R$ 1.070 · sem maturity R$ 8.038
+
+  Reconciliação: declarado R$ 31.250,00 vs computado R$ 31.236,66
+    → gap −R$ 13,34 (−0,04%, dentro de tolerância)
 ```
 
 ---
@@ -130,7 +149,7 @@ Claude (using portfolio-mcp.calculate_allocation_drift):
 | `import_xperformance_pdf`     | Parse XP's official portfolio PDF (XPerformance). Idempotent on re-import.             |   ✅   |
 | `import_extract_csv`          | Parse a Posição Consolidada / Extrato CSV. Auto-detects delimiter and column aliases.  |   ✅   |
 | `get_positions`               | List positions with quantity, market value, indexer, maturity. Optional class filter.  |   ✅   |
-| `get_portfolio_summary`       | Aggregate stats + declared-vs-computed reconciliation gap                              |   ⏳   |
+| `get_portfolio_summary`       | Aggregate stats + declared-vs-computed reconciliation gap                              |   ✅   |
 | `get_transactions`            | History of buys/sells                                                                  |   ⏳   |
 | `get_dividends`               | Income / proventos                                                                     |   ⏳   |
 | `calculate_allocation_drift`  | Compare current vs target allocation from `~/.xp-mcp/allocation.json`. Returns drift %, BRL delta, and BUY/SELL suggestions per class. |   ✅   |
@@ -313,7 +332,6 @@ The `UNIQUE (asset_class, external_id)` constraint + `ON CONFLICT DO UPDATE` mak
 - [x] PDF parser for XPerformance (XP's official portfolio report)
 - [x] CSV parser for Posição Consolidada / Extrato
 - [x] `get_positions` with class filter, P&L when invested-value is known
-- [ ] `get_portfolio_summary` with declared-vs-computed reconciliation gap
 - [ ] `import_nota_corretagem` (broker-note PDF → transactions)
 - [ ] CSV parser for proventos export
 - [x] `calculate_allocation_drift` against `~/.xp-mcp/allocation.json`
