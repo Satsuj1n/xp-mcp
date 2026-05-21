@@ -151,3 +151,31 @@ export function computeReconciliation(
     is_stale: lastDecl.reference_date < computedAsOf.slice(0, 10),
   };
 }
+
+export interface FgcCoverage {
+  covered_brl: number;
+  not_covered_brl: number;
+  unknown_brl: number;
+  covered_pct: number;
+}
+
+export function computeFgcCoverage(
+  positions: PositionRow[],
+  totalCents: number,
+): FgcCoverage {
+  let coveredC = 0,
+    notCoveredC = 0,
+    unknownC = 0;
+  for (const p of positions) {
+    if (p.market_value_cents == null) continue;
+    if (p.has_fgc === 1) coveredC += p.market_value_cents;
+    else if (p.has_fgc === 0) notCoveredC += p.market_value_cents;
+    else unknownC += p.market_value_cents;
+  }
+  return {
+    covered_brl: round2(coveredC / 100),
+    not_covered_brl: round2(notCoveredC / 100),
+    unknown_brl: round2(unknownC / 100),
+    covered_pct: totalCents > 0 ? coveredC / totalCents : 0,
+  };
+}

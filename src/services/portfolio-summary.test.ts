@@ -177,3 +177,43 @@ test("computeReconciliation: gap positive (computed > declared)", () => {
   assert.equal(r!.gap_brl, 750);
   assert.ok(r!.gap_pct > 0);
 });
+
+import { computeFgcCoverage } from "./portfolio-summary.js";
+
+function mkFgcPos(cls: AssetClass, mv: number, fgc: 0 | 1 | null): PositionRow {
+  return { ...mkPosition(cls, mv), has_fgc: fgc };
+}
+
+test("computeFgcCoverage: all covered", () => {
+  const out = computeFgcCoverage(
+    [
+      mkFgcPos("RENDA_FIXA_PRIVADA", 100000, 1),
+      mkFgcPos("RENDA_FIXA_PRIVADA", 200000, 1),
+    ],
+    300000,
+  );
+  assert.equal(out.covered_brl, 3000);
+  assert.equal(out.not_covered_brl, 0);
+  assert.equal(out.unknown_brl, 0);
+  assert.equal(out.covered_pct, 1);
+});
+
+test("computeFgcCoverage: mixed", () => {
+  const out = computeFgcCoverage(
+    [
+      mkFgcPos("RENDA_FIXA_PRIVADA", 100000, 1),
+      mkFgcPos("TESOURO", 200000, 0),
+      mkFgcPos("ACAO", 300000, null),
+    ],
+    600000,
+  );
+  assert.equal(out.covered_brl, 1000);
+  assert.equal(out.not_covered_brl, 2000);
+  assert.equal(out.unknown_brl, 3000);
+  assert.ok(Math.abs(out.covered_pct - 1000 / 6000) < 1e-9);
+});
+
+test("computeFgcCoverage: total zero → covered_pct = 0", () => {
+  const out = computeFgcCoverage([], 0);
+  assert.equal(out.covered_pct, 0);
+});
