@@ -19,7 +19,7 @@
 
 `xp-mcp` is a [Model Context Protocol](https://modelcontextprotocol.io/) server that exposes your **XP Investimentos** portfolio to Claude Desktop (or any MCP-compatible client). You feed it the official PDF/CSV exports XP already gives you — the server parses them, normalizes everything into a local SQLite database, and answers questions through MCP tools.
 
-- 🔒 **Local-first** — data lives in `~/.xp-mcp/data.db`. Zero outbound HTTP calls.
+- 🔒 **Local-first** — data lives in `~/.xp-mcp/data.db`. Core tools make zero outbound HTTP calls; advisor tools (v0.4+) are opt-in.
 - 📵 **No credentials, no scraping** — you control what goes in (PDF/CSV exports).
 - 👁 **Read-only by design** — no tool can place orders or modify anything at XP.
 - 🧱 **Stdio transport** — Claude spawns the process; nothing listens on a port.
@@ -134,6 +134,10 @@ Claude (using portfolio-mcp.calculate_allocation_drift):
 | `get_transactions`            | History of buys/sells                                                                  |   ⏳   |
 | `get_dividends`               | Income / proventos                                                                     |   ⏳   |
 | `calculate_allocation_drift`  | Compare current vs target allocation from `~/.xp-mcp/allocation.json`. Returns drift %, BRL delta, and BUY/SELL suggestions per class. |   ✅   |
+| `set_advisor_profile`         | Save the advisor profile (risk, horizon, objective, exclusions, outbound gate, brapi token). |   ✅   |
+| `get_advisor_profile`         | Read the saved profile. Returns `exists: false` if not configured.                     |   ✅   |
+| `get_market_data`             | Quotes / fundamentals from brapi.dev for 1-50 tickers, SQLite-cached. Opt-in.          |   ✅   |
+| `screen_assets`               | Rank B3 FIIs / stocks / ETFs by DY, P/VP, P/L, ROE, market cap. Opt-in.                |   ✅   |
 | `import_nota_corretagem`      | Parse broker-note PDFs for transaction history                                         |   ⏳   |
 
 ---
@@ -202,7 +206,49 @@ node dist/index.js <<'EOF'
 EOF
 ```
 
-You should see the server announce itself and list the three working tools.
+You should see the server announce itself and list the registered tools.
+
+---
+
+## Advisor (opt-in)
+
+v0.4 adds four MCP tools that turn `portfolio-mcp` into an investment-analysis advisor. These tools are **opt-in**: they only make outbound HTTP calls when the user has set `outbound_enabled: true` in their profile and accepted the disclaimer.
+
+### Configure your profile
+
+The profile lives at `~/.xp-mcp/advisor-profile.json`. Create or update it with `set_advisor_profile`:
+
+```jsonc
+{
+  "risk_tolerance": 6,
+  "horizon_years": 15,
+  "objective": "balanced",
+  "monthly_income_target_brl": 3000,
+  "excluded_classes": ["FUNDO"],
+  "excluded_tickers": ["XYZW3"],
+  "notes": "evitar tabaco, prefiro logística e shoppings",
+  "outbound_enabled": true,
+  "brapi_token": "..."
+}
+```
+
+When you flip `outbound_enabled` to `true`, the tool requires `accept_disclaimer: true` in the same call and stamps `accepted_disclaimer_at` on the saved profile.
+
+### Disclaimer
+
+> **Análise educacional baseada em dados públicos. Não constitui recomendação de investimento. Decisões financeiras são de sua responsabilidade.**
+
+The disclaimer is also returned in `warnings[0]` of every advisor tool that ranks or suggests assets.
+
+### Source: brapi.dev
+
+v0.4 uses [brapi.dev](https://brapi.dev) as the sole market-data source. Anonymous calls work for personal use; if you hit rate limits, set `brapi_token` in the profile. Quotes are cached for 60 minutes, fundamentals for 24 hours, universe lists for 7 days. Override per call via `cache_ttl_minutes`.
+
+### Example flow
+
+1. `set_advisor_profile` — saves the profile, enables outbound
+2. `get_market_data { tickers: ["BBAS3","MXRF11"] }` — quotes
+3. `screen_assets { asset_class: "FII", criteria: { sort_by: "dividend_yield", order: "desc", filters: { min_dividend_yield_pct: 8 }, limit: 10 } }`
 
 ---
 
@@ -257,8 +303,8 @@ The `UNIQUE (asset_class, external_id)` constraint + `ON CONFLICT DO UPDATE` mak
 ## Privacy
 
 - The SQLite file (`~/.xp-mcp/data.db`) is the only place your position data lives. `.gitignore` blocks `*.db`, `*.sqlite`, and `data/` from ever being committed.
-- The server makes **no outbound HTTP calls** in the current MVP. No telemetry. No analytics. No price API.
-- If/when price fetching is added (B3, brapi.dev, Yahoo Finance), it will be **opt-in via env var**, scoped to public quote APIs, with no portfolio data leaving the machine.
+- The server makes **no outbound HTTP calls** for the core import/inspection tools (`import_xperformance_pdf`, `import_extract_csv`, `get_positions`, `calculate_allocation_drift`). No telemetry. No analytics.
+- The v0.4 advisor tools (`get_market_data`, `screen_assets`) call brapi.dev **only when `outbound_enabled: true`** in `~/.xp-mcp/advisor-profile.json` and the user has accepted the disclaimer. Disabled by default.
 
 ---
 
@@ -272,7 +318,10 @@ The `UNIQUE (asset_class, external_id)` constraint + `ON CONFLICT DO UPDATE` mak
 - [ ] CSV parser for proventos export
 - [x] `calculate_allocation_drift` against `~/.xp-mcp/allocation.json`
 - [x] v0.3 — npm publish + Smithery + awesome-mcp PR
-- [ ] Optional opt-in price fetching (B3 / brapi.dev / Yahoo)
+- [x] v0.4 — Investment advisor foundations: `set_advisor_profile`, `get_advisor_profile`, `get_market_data`, `screen_assets` (brapi.dev, SQLite cache)
+- [x] v0.4 — opt-in market data via brapi.dev (advisor)
+- [ ] v0.5 — `suggest_buys` orchestrator (combines profile + drift + market data + screening)
+- [ ] Crypto adapter — new `MarketDataSource` for Binance / Mercado Bitcoin / Foxbit
 - [ ] Adapters for other Brazilian brokers (Rico, NuInvest, Inter, Avenue)
 - [ ] Open Finance Brasil investment module when the standard matures
 
