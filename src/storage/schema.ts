@@ -1,6 +1,7 @@
 import type { Database } from "better-sqlite3";
+import { migrateV1ToV2 } from "./migration.js";
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export const ASSET_CLASSES = [
   "TESOURO",
@@ -20,15 +21,17 @@ const DDL_STATEMENTS: readonly string[] = [
    )`,
 
   `CREATE TABLE IF NOT EXISTS imports (
-     id            INTEGER PRIMARY KEY AUTOINCREMENT,
-     source_type   TEXT    NOT NULL,
-     source_path   TEXT    NOT NULL,
-     imported_at   TEXT    NOT NULL DEFAULT (datetime('now')),
-     rows_total    INTEGER NOT NULL DEFAULT 0,
-     rows_imported INTEGER NOT NULL DEFAULT 0,
-     rows_updated  INTEGER NOT NULL DEFAULT 0,
-     rows_skipped  INTEGER NOT NULL DEFAULT 0,
-     notes         TEXT
+     id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+     source_type           TEXT    NOT NULL,
+     source_path           TEXT    NOT NULL,
+     imported_at           TEXT    NOT NULL DEFAULT (datetime('now')),
+     rows_total            INTEGER NOT NULL DEFAULT 0,
+     rows_imported         INTEGER NOT NULL DEFAULT 0,
+     rows_updated          INTEGER NOT NULL DEFAULT 0,
+     rows_skipped          INTEGER NOT NULL DEFAULT 0,
+     notes                 TEXT,
+     declared_total_cents  INTEGER,
+     reference_date        TEXT
    )`,
 
   `CREATE TABLE IF NOT EXISTS positions (
@@ -103,6 +106,17 @@ const DDL_STATEMENTS: readonly string[] = [
 ];
 
 export function applySchema(db: Database): void {
+  // Read current version (may be absent on fresh DB)
+  let currentVersion = 0;
+  try {
+    const row = db
+      .prepare("SELECT value FROM meta WHERE key = 'schema_version'")
+      .get() as { value: string } | undefined;
+    if (row) currentVersion = Number.parseInt(row.value, 10);
+  } catch {
+    // meta table may not exist on first run
+  }
+
   const tx = db.transaction(() => {
     for (const sql of DDL_STATEMENTS) {
       db.prepare(sql).run();
@@ -112,4 +126,10 @@ export function applySchema(db: Database): void {
     ).run(String(SCHEMA_VERSION));
   });
   tx();
+
+  // Run migration if upgrading from v1. (Fresh installs get v2 columns from
+  // DDL above, so migration is a no-op there but still safe to run.)
+  if (currentVersion === 1) {
+    migrateV1ToV2(db);
+  }
 }
