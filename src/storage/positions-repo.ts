@@ -1,5 +1,5 @@
 import type { Database } from "better-sqlite3";
-import type { ParsedPosition } from "../parsers/csv-extract.js";
+import type { ParsedPosition } from "../adapters/xp/csv-extract.js";
 import type { AssetClass } from "./schema.js";
 
 export interface UpsertOutcome {

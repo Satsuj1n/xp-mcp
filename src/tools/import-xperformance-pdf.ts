@@ -1,14 +1,14 @@
 import { z } from "zod";
 import { resolve } from "node:path";
 import { statSync } from "node:fs";
-import { parseXPerformancePdf } from "../parsers/pdf-xperformance.js";
+import { parseXPerformancePdf } from "../adapters/xp/pdf-xperformance.js";
 import { getDb } from "../storage/db.js";
 import {
   createImportRecord,
   updateImportCounts,
   upsertPositions,
 } from "../storage/positions-repo.js";
-import type { ParsedPosition } from "../parsers/csv-extract.js";
+import type { ParsedPosition } from "../adapters/xp/csv-extract.js";
 
 export const importXperformancePdfSchema = z.object({
   file_path: z
