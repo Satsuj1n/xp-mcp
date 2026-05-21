@@ -33,7 +33,7 @@ export class DisclaimerRequiredError extends AdvisorError {
 
 export class BrapiRateLimitError extends AdvisorError {
   readonly code = "BRAPI_RATE_LIMIT";
-  readonly recoverable = true;
+  override readonly recoverable = true;
   constructor(
     message: string,
     public readonly retryAfterSeconds: number,
@@ -44,7 +44,7 @@ export class BrapiRateLimitError extends AdvisorError {
 
 export class BrapiTimeoutError extends AdvisorError {
   readonly code = "BRAPI_TIMEOUT";
-  readonly recoverable = true;
+  override readonly recoverable = true;
 }
 
 export class TickerNotFoundError extends AdvisorError {
