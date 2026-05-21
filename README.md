@@ -319,7 +319,6 @@ The `UNIQUE (asset_class, external_id)` constraint + `ON CONFLICT DO UPDATE` mak
 - [x] `calculate_allocation_drift` against `~/.xp-mcp/allocation.json`
 - [x] v0.3 — npm publish + Smithery + awesome-mcp PR
 - [x] v0.4 — Investment advisor foundations: `set_advisor_profile`, `get_advisor_profile`, `get_market_data`, `screen_assets` (brapi.dev, SQLite cache)
-- [x] v0.4 — opt-in market data via brapi.dev (advisor)
 - [ ] v0.5 — `suggest_buys` orchestrator (combines profile + drift + market data + screening)
 - [ ] Crypto adapter — new `MarketDataSource` for Binance / Mercado Bitcoin / Foxbit
 - [ ] Adapters for other Brazilian brokers (Rico, NuInvest, Inter, Avenue)
