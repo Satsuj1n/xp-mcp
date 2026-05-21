@@ -252,3 +252,185 @@ export function computeMaturityBuckets(
     horizon_from: horizonFromDate,
   };
 }
+
+export interface PlCoverage {
+  positions_with_pl_count: number;
+  positions_total: number;
+}
+
+export interface PortfolioSummary {
+  total_market_value_brl: number;
+  positions_count: number;
+  computed_as_of: string;
+  total_invested_brl: number;
+  total_unrealized_pl_brl: number;
+  total_unrealized_pl_pct: number | null;
+  pl_coverage: PlCoverage;
+  by_class: ByClassRow[];
+  top_positions: TopPosition[];
+  fgc_coverage: FgcCoverage;
+  maturity_buckets: MaturityBuckets;
+  reconciliation: Reconciliation | null;
+  warnings: string[];
+}
+
+const TOP_N = 5;
+const LARGE_GAP_THRESHOLD = 0.01;
+
+export function computePortfolioSummary(
+  allPositions: PositionRow[],
+  lastDecl: LastDeclaredImport | null,
+): PortfolioSummary {
+  const warnings: string[] = [];
+
+  // 1) Filter positions without market_value
+  const withMv = allPositions.filter((p) => p.market_value_cents != null);
+  const skipped = allPositions.length - withMv.length;
+  if (skipped > 0) {
+    warnings.push(
+      `${skipped} position${skipped === 1 ? "" : "s"} skipped (no market value)`,
+    );
+  }
+
+  // 2) Empty-state shortcut
+  if (withMv.length === 0) {
+    warnings.unshift(
+      "No positions in database. Run import_xperformance_pdf or import_extract_csv first.",
+    );
+    const now = new Date().toISOString().replace("T", " ").slice(0, 19);
+    const reconciliation = computeReconciliation(0, now, lastDecl);
+    return {
+      total_market_value_brl: 0,
+      positions_count: 0,
+      computed_as_of: now,
+      total_invested_brl: 0,
+      total_unrealized_pl_brl: 0,
+      total_unrealized_pl_pct: null,
+      pl_coverage: { positions_with_pl_count: 0, positions_total: 0 },
+      by_class: [],
+      top_positions: [],
+      fgc_coverage: {
+        covered_brl: 0,
+        not_covered_brl: 0,
+        unknown_brl: 0,
+        covered_pct: 0,
+      },
+      maturity_buckets: {
+        short_brl: 0,
+        medium_brl: 0,
+        long_brl: 0,
+        no_maturity_brl: 0,
+        short_count: 0,
+        medium_count: 0,
+        long_count: 0,
+        no_maturity_count: 0,
+        horizon_from: now.slice(0, 10),
+      },
+      reconciliation,
+      warnings,
+    };
+  }
+
+  // 3) Totals
+  const totalCents = withMv.reduce(
+    (s, p) => s + (p.market_value_cents as number),
+    0,
+  );
+  const computedAsOf = withMv.reduce(
+    (max, p) => (p.last_imported_at > max ? p.last_imported_at : max),
+    withMv[0]!.last_imported_at,
+  );
+  const horizonFromDate = computedAsOf.slice(0, 10);
+
+  // 4) P&L over subset
+  const withInvested = withMv.filter((p) => p.invested_cents != null);
+  const investedCents = withInvested.reduce(
+    (s, p) => s + (p.invested_cents as number),
+    0,
+  );
+  const marketForPlCents = withInvested.reduce(
+    (s, p) => s + (p.market_value_cents as number),
+    0,
+  );
+  const plCents = marketForPlCents - investedCents;
+  const totalUnrealizedPlPct =
+    investedCents > 0 ? plCents / investedCents : null;
+
+  // 5) Sub-functions
+  const by_class = aggregateByClass(withMv);
+  const top_positions = pickTopPositions(withMv, TOP_N, totalCents);
+  const fgc_coverage = computeFgcCoverage(withMv, totalCents);
+  const maturity_buckets = computeMaturityBuckets(withMv, horizonFromDate);
+  const reconciliation = computeReconciliation(
+    totalCents,
+    computedAsOf,
+    lastDecl,
+  );
+
+  // 6) Conditional warnings
+  if (reconciliation == null && lastDecl == null) {
+    warnings.push(
+      "No XPerformance PDF imported yet; reconciliation unavailable",
+    );
+  }
+  if (reconciliation?.is_stale) {
+    warnings.push(
+      `Declared total dates from ${reconciliation.declared_reference_date}; computed reflects state as of ${horizonFromDate}`,
+    );
+  }
+  if (
+    reconciliation &&
+    Math.abs(reconciliation.gap_pct) > LARGE_GAP_THRESHOLD
+  ) {
+    warnings.push(
+      `Reconciliation gap is ${(reconciliation.gap_pct * 100).toFixed(2)}% (R$ ${reconciliation.gap_brl.toFixed(2)}); possible import miss`,
+    );
+  }
+
+  // 7) Past-maturity & malformed-maturity counts → warnings
+  const horizonMs = Date.parse(`${horizonFromDate}T00:00:00Z`);
+  let pastCount = 0,
+    malformedCount = 0;
+  for (const p of withMv) {
+    if (p.maturity_date == null) continue;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(p.maturity_date)) {
+      malformedCount += 1;
+      continue;
+    }
+    const mat = Date.parse(`${p.maturity_date}T00:00:00Z`);
+    if (Number.isNaN(mat)) {
+      malformedCount += 1;
+      continue;
+    }
+    if (mat < horizonMs) pastCount += 1;
+  }
+  if (pastCount > 0) {
+    warnings.push(
+      `${pastCount} position${pastCount === 1 ? "" : "s"} have past maturity (counted as short bucket)`,
+    );
+  }
+  if (malformedCount > 0) {
+    warnings.push(
+      `${malformedCount} position${malformedCount === 1 ? "" : "s"} have malformed maturity_date (counted as no_maturity)`,
+    );
+  }
+
+  return {
+    total_market_value_brl: round2(totalCents / 100),
+    positions_count: withMv.length,
+    computed_as_of: computedAsOf,
+    total_invested_brl: round2(investedCents / 100),
+    total_unrealized_pl_brl: round2(plCents / 100),
+    total_unrealized_pl_pct: totalUnrealizedPlPct,
+    pl_coverage: {
+      positions_with_pl_count: withInvested.length,
+      positions_total: withMv.length,
+    },
+    by_class,
+    top_positions,
+    fgc_coverage,
+    maturity_buckets,
+    reconciliation,
+    warnings,
+  };
+}

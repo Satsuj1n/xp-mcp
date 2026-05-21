@@ -289,3 +289,109 @@ test("computeMaturityBuckets: exactly-at-boundary edge cases", () => {
   assert.equal(out.medium_count, 1);
   assert.equal(out.long_count, 1);
 });
+
+import { computePortfolioSummary } from "./portfolio-summary.js";
+
+test("computePortfolioSummary: empty DB returns empty-state summary with warning", () => {
+  const out = computePortfolioSummary([], null);
+  assert.equal(out.total_market_value_brl, 0);
+  assert.equal(out.positions_count, 0);
+  assert.deepEqual(out.by_class, []);
+  assert.deepEqual(out.top_positions, []);
+  assert.equal(out.reconciliation, null);
+  assert.ok(out.warnings.some((w) => w.includes("No positions in database")));
+});
+
+test("computePortfolioSummary: full portfolio with declared import", () => {
+  const positions: PositionRow[] = [
+    {
+      ...mkPosition("TESOURO", 1500000),
+      maturity_date: "2031-01-01",
+      has_fgc: 0,
+    },
+    {
+      ...mkPosition("FII", 500000, 450000, "MXRF11"),
+      maturity_date: null,
+      has_fgc: null,
+    },
+    {
+      ...mkPosition("RENDA_FIXA_PRIVADA", 200000, 180000, "CDB1"),
+      maturity_date: "2026-08-15",
+      has_fgc: 1,
+    },
+  ];
+  const declared: LastDeclaredImport = {
+    id: 1,
+    declared_total_cents: 2200000,
+    reference_date: "2026-05-21",
+    source_path: "/tmp/x.pdf",
+    imported_at: "2026-05-21 10:00:00",
+  };
+  const out = computePortfolioSummary(positions, declared);
+  assert.equal(out.total_market_value_brl, 22000);
+  assert.equal(out.positions_count, 3);
+  assert.equal(out.by_class.length, 3);
+  assert.equal(out.by_class[0]!.asset_class, "TESOURO"); // sorted by mv desc
+  assert.equal(out.top_positions.length, 3);
+  assert.equal(out.fgc_coverage.covered_brl, 2000);
+  assert.equal(out.maturity_buckets.no_maturity_brl, 5000);
+  assert.ok(out.reconciliation);
+  assert.equal(out.reconciliation!.gap_brl, 0);
+  // P&L coverage: 2 of 3 positions have invested → total_invested = 450+180 = 630
+  assert.equal(out.pl_coverage.positions_with_pl_count, 2);
+  assert.equal(out.pl_coverage.positions_total, 3);
+  assert.equal(out.total_invested_brl, 6300);
+});
+
+test("computePortfolioSummary: positions without market_value are filtered with warning", () => {
+  const out = computePortfolioSummary(
+    [mkPosition("FII", 100000), mkPosition("ACAO", null)],
+    null,
+  );
+  assert.equal(out.positions_count, 1);
+  assert.ok(out.warnings.some((w) => w.includes("skipped")));
+});
+
+test("computePortfolioSummary: no declared import emits warning when positions exist", () => {
+  const out = computePortfolioSummary([mkPosition("FII", 100000)], null);
+  assert.ok(
+    out.warnings.some((w) => w.includes("No XPerformance PDF imported yet")),
+  );
+});
+
+test("computePortfolioSummary: stale declared emits stale warning", () => {
+  const stale: LastDeclaredImport = {
+    id: 1,
+    declared_total_cents: 100000,
+    reference_date: "2026-05-01",
+    source_path: "/tmp/x.pdf",
+    imported_at: "2026-05-01 10:00:00",
+  };
+  const positions = [
+    {
+      ...mkPosition("FII", 100000),
+      last_imported_at: "2026-05-21 10:00:00",
+    },
+  ];
+  const out = computePortfolioSummary(positions, stale);
+  assert.equal(out.reconciliation!.is_stale, true);
+  assert.ok(out.warnings.some((w) => w.includes("Declared total dates from")));
+});
+
+test("computePortfolioSummary: large gap (>1%) emits warning", () => {
+  const declared: LastDeclaredImport = {
+    id: 1,
+    declared_total_cents: 1000000,
+    reference_date: "2026-05-21",
+    source_path: "/tmp/x.pdf",
+    imported_at: "2026-05-21 10:00:00",
+  };
+  const positions = [
+    {
+      ...mkPosition("FII", 800000),
+      last_imported_at: "2026-05-21 10:00:00",
+    },
+  ];
+  const out = computePortfolioSummary(positions, declared);
+  assert.ok(out.warnings.some((w) => w.includes("Reconciliation gap")));
+});
