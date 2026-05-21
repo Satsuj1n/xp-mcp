@@ -11,11 +11,12 @@ export function parseNotesForDeclared(notes: string | null): NotesDeclared {
     return { declared_total_cents: null, reference_date: null };
   }
   const centsMatch = notes.match(RE_CENTS);
+  const centsRaw = centsMatch?.[1];
   const dateMatch = notes.match(RE_DATE);
+  const dateRaw = dateMatch?.[1];
   return {
-    declared_total_cents: centsMatch
-      ? Number.parseInt(centsMatch[1], 10)
-      : null,
-    reference_date: dateMatch ? dateMatch[1] : null,
+    declared_total_cents:
+      centsRaw != null ? Number.parseInt(centsRaw, 10) : null,
+    reference_date: dateRaw ?? null,
   };
 }
