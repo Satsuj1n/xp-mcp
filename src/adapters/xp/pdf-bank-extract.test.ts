@@ -114,14 +114,14 @@ const SAMPLE_HEADER = `
 22/05/2026 12:46:05Conta Digital XP | Extrato
 Conta Digital Extrato
 Data da consulta: 22/05/2026 12:46:05
-FELIPE TESTBanco XP S.A | Agência: 0001 | Conta: 16751847
+FELIPE TESTBanco XP S.A | Agência: 0001 | Conta: 00000000
 Documento: 000.000.000-00De: 23/11/2025 Até: 22/05/2026
 `;
 
 test("extractAccountMetadata: parses all four fields from a real header", () => {
   const meta = extractAccountMetadata(SAMPLE_HEADER);
   assert.equal(meta.account_holder, "FELIPE TEST");
-  assert.equal(meta.account_number, "16751847");
+  assert.equal(meta.account_number, "00000000");
   assert.equal(meta.period_from, "2025-11-23");
   assert.equal(meta.period_to, "2026-05-22");
 });
