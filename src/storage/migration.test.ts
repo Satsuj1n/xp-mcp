@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import Database from "better-sqlite3";
-import { migrateV1ToV2 } from "./migration.js";
+import { migrateV1ToV2, migrateV2ToV3 } from "./migration.js";
 
 function withTempDb(): { db: Database.Database; cleanup: () => void } {
   const dir = mkdtempSync(join(tmpdir(), "xp-mcp-migration-"));
@@ -134,6 +134,118 @@ test("is idempotent (re-running does not error or change data)", () => {
     migrateV1ToV2(db); // re-run
     const after = db.prepare("SELECT declared_total_cents FROM imports").get();
     assert.deepEqual(after, before);
+  } finally {
+    cleanup();
+  }
+});
+
+function makeV2Schema(db: Database.Database): void {
+  // Minimum v2 schema needed for v3 migration: meta + imports.
+  db.prepare(
+    `CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)`,
+  ).run();
+  db.prepare(
+    `CREATE TABLE imports (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source_type TEXT NOT NULL,
+    source_path TEXT NOT NULL,
+    imported_at TEXT NOT NULL DEFAULT (datetime('now')),
+    rows_total INTEGER NOT NULL DEFAULT 0,
+    rows_imported INTEGER NOT NULL DEFAULT 0,
+    rows_updated INTEGER NOT NULL DEFAULT 0,
+    rows_skipped INTEGER NOT NULL DEFAULT 0,
+    notes TEXT,
+    declared_total_cents INTEGER,
+    reference_date TEXT
+  )`,
+  ).run();
+  db.prepare(
+    `INSERT INTO meta (key, value) VALUES ('schema_version', '2')`,
+  ).run();
+}
+
+test("v2→v3: creates cash_flows table with expected columns", () => {
+  const { db, cleanup } = withTempDb();
+  try {
+    makeV2Schema(db);
+    migrateV2ToV3(db);
+    const cols = db.prepare("PRAGMA table_info(cash_flows)").all() as {
+      name: string;
+    }[];
+    const names = cols.map((c) => c.name).sort();
+    assert.deepEqual(names, [
+      "amount_cents",
+      "description",
+      "flow_date",
+      "flow_datetime",
+      "id",
+      "import_id",
+      "kind",
+    ]);
+  } finally {
+    cleanup();
+  }
+});
+
+test("v2→v3: creates expected indexes", () => {
+  const { db, cleanup } = withTempDb();
+  try {
+    makeV2Schema(db);
+    migrateV2ToV3(db);
+    const indexes = db
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='cash_flows'",
+      )
+      .all() as { name: string }[];
+    const names = indexes.map((i) => i.name);
+    assert.ok(names.includes("idx_cash_flows_date"));
+    assert.ok(names.includes("idx_cash_flows_kind"));
+  } finally {
+    cleanup();
+  }
+});
+
+test("v2→v3: UNIQUE (flow_datetime, amount_cents, kind) enforced", () => {
+  const { db, cleanup } = withTempDb();
+  try {
+    makeV2Schema(db);
+    migrateV2ToV3(db);
+    db.prepare(
+      "INSERT INTO cash_flows (flow_datetime, flow_date, kind, amount_cents, description) VALUES (?, ?, ?, ?, ?)",
+    ).run(
+      "2026-05-19 07:03:19",
+      "2026-05-19",
+      "APORTE",
+      550000,
+      "Transferência enviada para conta investimento",
+    );
+
+    assert.throws(() => {
+      db.prepare(
+        "INSERT INTO cash_flows (flow_datetime, flow_date, kind, amount_cents, description) VALUES (?, ?, ?, ?, ?)",
+      ).run(
+        "2026-05-19 07:03:19",
+        "2026-05-19",
+        "APORTE",
+        550000,
+        "different description here",
+      );
+    }, /UNIQUE constraint failed/i);
+  } finally {
+    cleanup();
+  }
+});
+
+test("v2→v3: idempotent (re-running does not error)", () => {
+  const { db, cleanup } = withTempDb();
+  try {
+    makeV2Schema(db);
+    migrateV2ToV3(db);
+    migrateV2ToV3(db); // re-run must not throw
+    const cols = db.prepare("PRAGMA table_info(cash_flows)").all() as {
+      name: string;
+    }[];
+    assert.equal(cols.length, 7);
   } finally {
     cleanup();
   }

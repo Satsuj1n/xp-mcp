@@ -38,6 +38,39 @@ export function migrateV1ToV2(db: Database): void {
   tx();
 }
 
+/**
+ * Idempotent migration from schema v2 to v3.
+ * - Creates the `cash_flows` table (capital flows between digital account and
+ *   investment account: APORTE / RESGATE).
+ * - Creates supporting indexes on flow_date and kind.
+ * - Sets meta.schema_version = '3'.
+ *
+ * Safe to call multiple times: all DDL uses IF NOT EXISTS; no data is touched.
+ */
+export function migrateV2ToV3(db: Database): void {
+  const STATEMENTS = [
+    `CREATE TABLE IF NOT EXISTS cash_flows (
+       id             INTEGER PRIMARY KEY AUTOINCREMENT,
+       flow_datetime  TEXT    NOT NULL,
+       flow_date      TEXT    NOT NULL,
+       kind           TEXT    NOT NULL,
+       amount_cents   INTEGER NOT NULL,
+       description    TEXT    NOT NULL,
+       import_id      INTEGER REFERENCES imports(id),
+       UNIQUE (flow_datetime, amount_cents, kind)
+     )`,
+    `CREATE INDEX IF NOT EXISTS idx_cash_flows_date ON cash_flows(flow_date)`,
+    `CREATE INDEX IF NOT EXISTS idx_cash_flows_kind ON cash_flows(kind)`,
+  ];
+  const tx = db.transaction(() => {
+    for (const sql of STATEMENTS) db.prepare(sql).run();
+    db.prepare(
+      "INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '3')",
+    ).run();
+  });
+  tx();
+}
+
 function addColumnIfMissing(
   db: Database,
   table: string,

@@ -1,7 +1,7 @@
 import type { Database } from "better-sqlite3";
-import { migrateV1ToV2 } from "./migration.js";
+import { migrateV1ToV2, migrateV2ToV3 } from "./migration.js";
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 export const ASSET_CLASSES = [
   "TESOURO",
@@ -103,6 +103,20 @@ const DDL_STATEMENTS: readonly string[] = [
    )`,
 
   `CREATE INDEX IF NOT EXISTS idx_mdc_cached_at ON market_data_cache(cached_at)`,
+
+  `CREATE TABLE IF NOT EXISTS cash_flows (
+     id             INTEGER PRIMARY KEY AUTOINCREMENT,
+     flow_datetime  TEXT    NOT NULL,
+     flow_date      TEXT    NOT NULL,
+     kind           TEXT    NOT NULL,
+     amount_cents   INTEGER NOT NULL,
+     description    TEXT    NOT NULL,
+     import_id      INTEGER REFERENCES imports(id),
+     UNIQUE (flow_datetime, amount_cents, kind)
+   )`,
+
+  `CREATE INDEX IF NOT EXISTS idx_cash_flows_date ON cash_flows(flow_date)`,
+  `CREATE INDEX IF NOT EXISTS idx_cash_flows_kind ON cash_flows(kind)`,
 ];
 
 export function applySchema(db: Database): void {
@@ -127,9 +141,13 @@ export function applySchema(db: Database): void {
   });
   tx();
 
-  // Run migration if upgrading from v1. (Fresh installs get v2 columns from
-  // DDL above, so migration is a no-op there but still safe to run.)
+  // Run migrations for existing DBs upgrading from older versions.
+  // Fresh installs get all columns from DDL above, so these are no-ops there
+  // but still safe to run (all migration functions are idempotent).
   if (currentVersion === 1) {
     migrateV1ToV2(db);
+  }
+  if (currentVersion === 1 || currentVersion === 2) {
+    migrateV2ToV3(db);
   }
 }
