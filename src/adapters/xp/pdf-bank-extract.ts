@@ -5,6 +5,8 @@
  * bill payments) is intentionally ignored.
  */
 
+import { readFileSync } from "node:fs";
+import pdf from "pdf-parse/lib/pdf-parse.js";
 import { parseBRLToCents, parseDateBR } from "../../parsers/normalize.js";
 
 export type CashFlowKind = "APORTE" | "RESGATE";
@@ -132,4 +134,73 @@ export function extractAccountMetadata(
     period_from: period ? (parseDateBR(period[1]) ?? null) : null,
     period_to: period ? (parseDateBR(period[2]) ?? null) : null,
   };
+}
+
+export interface ParsedBankExtract {
+  cash_flows: ParsedCashFlow[];
+  total_lines: number;
+  ignored_lines: number;
+  metadata: ParsedBankExtractMetadata;
+  warnings: string[];
+}
+
+const HEADER_MARKER = /(Conta Digital Extrato|DataDescri[çc][aã]oValorSaldo)/i;
+
+/**
+ * Parses the full text content of a Conta Digital Extrato PDF. Pure function:
+ * given the same text and reference year, always returns the same result.
+ */
+export function parseBankExtractText(
+  text: string,
+  referenceYear: number = new Date().getFullYear(),
+): ParsedBankExtract {
+  const warnings: string[] = [];
+  const metadata = extractAccountMetadata(text);
+
+  if (!HEADER_MARKER.test(text)) {
+    warnings.push("No bank extract header found — is this the right PDF?");
+  }
+
+  const lines = text
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const cash_flows: ParsedCashFlow[] = [];
+  let total_lines = 0;
+  let ignored_lines = 0;
+
+  for (const line of lines) {
+    // Pre-check: only count lines that match the row shape.
+    if (!LINE_RE.test(line)) continue;
+    total_lines++;
+
+    const parsed = parseLine(line, referenceYear);
+    if (parsed == null) {
+      ignored_lines++;
+      continue;
+    }
+    cash_flows.push(parsed);
+  }
+
+  if (metadata.period_from == null || metadata.period_to == null) {
+    warnings.push("Period metadata missing");
+  }
+  if (metadata.account_holder == null || metadata.account_number == null) {
+    warnings.push("Account metadata missing");
+  }
+
+  return { cash_flows, total_lines, ignored_lines, metadata, warnings };
+}
+
+/**
+ * Reads the PDF, extracts text via `pdf-parse`, delegates to
+ * `parseBankExtractText`. The async boundary lives only at the I/O step;
+ * downstream code is pure.
+ */
+export async function parseBankExtractPdf(
+  filePath: string,
+): Promise<ParsedBankExtract> {
+  const buf = readFileSync(filePath);
+  const data = await pdf(buf);
+  return parseBankExtractText(data.text);
 }

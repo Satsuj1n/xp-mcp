@@ -1,10 +1,15 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync, existsSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   resolveAmbiguousYear,
   isInvestmentTransfer,
   parseLine,
   extractAccountMetadata,
+  parseBankExtractPdf,
+  parseBankExtractText,
 } from "./pdf-bank-extract.js";
 
 test("resolveAmbiguousYear: maps low 2-digit years to 20XX", () => {
@@ -138,3 +143,80 @@ test("extractAccountMetadata: handles partial header gracefully", () => {
   assert.equal(meta.account_holder, null);
   assert.equal(meta.account_number, null);
 });
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const FIXTURE_TXT = join(
+  HERE,
+  "..",
+  "..",
+  "..",
+  "tests",
+  "fixtures",
+  "extrato-bank-sample-anon.txt",
+);
+const FIXTURE_PDF = join(
+  HERE,
+  "..",
+  "..",
+  "..",
+  "tests",
+  "fixtures",
+  "extrato-bank-sample.pdf",
+);
+
+test("parseBankExtractText: extracts 6 cash flows from the anon fixture", () => {
+  const text = readFileSync(FIXTURE_TXT, "utf8");
+  const result = parseBankExtractText(text, 2026);
+  assert.equal(result.cash_flows.length, 6);
+  assert.equal(result.ignored_lines, 3);
+  assert.equal(result.warnings.length, 0);
+});
+
+test("parseBankExtractText: aportes and resgates are correctly classified", () => {
+  const text = readFileSync(FIXTURE_TXT, "utf8");
+  const result = parseBankExtractText(text, 2026);
+  const aportes = result.cash_flows.filter((f) => f.kind === "APORTE");
+  const resgates = result.cash_flows.filter((f) => f.kind === "RESGATE");
+  assert.equal(aportes.length, 3);
+  assert.equal(resgates.length, 3);
+});
+
+test("parseBankExtractText: extracts metadata", () => {
+  const text = readFileSync(FIXTURE_TXT, "utf8");
+  const result = parseBankExtractText(text, 2026);
+  assert.equal(result.metadata.account_holder, "FELIPE TEST");
+  assert.equal(result.metadata.account_number, "00000000");
+  assert.equal(result.metadata.period_from, "2025-11-23");
+  assert.equal(result.metadata.period_to, "2026-05-22");
+});
+
+test("parseBankExtractText: emits no-header warning when text has no extract markers", () => {
+  const result = parseBankExtractText("just some random words here", 2026);
+  assert.equal(result.cash_flows.length, 0);
+  assert.ok(
+    result.warnings.some((w) => /No bank extract header found/i.test(w)),
+  );
+});
+
+test("parseBankExtractText: ignored_lines counts correctly", () => {
+  const text = readFileSync(FIXTURE_TXT, "utf8");
+  const result = parseBankExtractText(text, 2026);
+  assert.equal(result.total_lines, 9);
+  assert.equal(result.ignored_lines, 3);
+});
+
+test(
+  "parseBankExtractPdf: full pipeline against real PDF (local only)",
+  { skip: !existsSync(FIXTURE_PDF) },
+  async () => {
+    const result = await parseBankExtractPdf(FIXTURE_PDF);
+    assert.ok(
+      result.cash_flows.length > 0,
+      "expected at least one cash flow from real PDF",
+    );
+    for (const row of result.cash_flows) {
+      assert.ok(row.kind === "APORTE" || row.kind === "RESGATE");
+      assert.ok(row.amount_cents > 0);
+    }
+  },
+);
