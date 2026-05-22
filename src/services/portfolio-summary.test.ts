@@ -250,22 +250,51 @@ test("computeMaturityBuckets: short (<1y), medium (1-3y), long (>3y), no_maturit
   assert.equal(out.horizon_from, "2026-05-21");
 });
 
-test("computeMaturityBuckets: past maturity → short bucket", () => {
+test("computeMaturityBuckets: past maturity → short bucket + past_count", () => {
   const out = computeMaturityBuckets(
     [mkMatPos(100000, "2025-01-01")],
     "2026-05-21",
   );
   assert.equal(out.short_brl, 1000);
   assert.equal(out.short_count, 1);
+  assert.equal(out.past_count, 1);
+  assert.equal(out.malformed_count, 0);
 });
 
-test("computeMaturityBuckets: malformed maturity → no_maturity bucket", () => {
+test("computeMaturityBuckets: malformed maturity → no_maturity bucket + malformed_count", () => {
   const out = computeMaturityBuckets(
     [mkMatPos(100000, "not-a-date")],
     "2026-05-21",
   );
   assert.equal(out.no_maturity_brl, 1000);
   assert.equal(out.no_maturity_count, 1);
+  assert.equal(out.malformed_count, 1);
+  assert.equal(out.past_count, 0);
+});
+
+test("computeMaturityBuckets: null maturity does NOT count as malformed", () => {
+  const out = computeMaturityBuckets(
+    [mkMatPos(100000, null, "ACAO")],
+    "2026-05-21",
+  );
+  assert.equal(out.no_maturity_count, 1);
+  assert.equal(out.malformed_count, 0);
+  assert.equal(out.past_count, 0);
+});
+
+test("computeMaturityBuckets: mixed past + malformed + future short", () => {
+  const out = computeMaturityBuckets(
+    [
+      mkMatPos(100000, "2025-01-01"), // past → short + past_count
+      mkMatPos(200000, "not-a-date"), // malformed → no_maturity + malformed_count
+      mkMatPos(300000, "2026-08-15"), // future short, not past
+    ],
+    "2026-05-21",
+  );
+  assert.equal(out.short_count, 2); // past + future-short
+  assert.equal(out.past_count, 1);
+  assert.equal(out.no_maturity_count, 1);
+  assert.equal(out.malformed_count, 1);
 });
 
 test("computeMaturityBuckets: empty positions → all zeros", () => {
@@ -299,6 +328,28 @@ test("computePortfolioSummary: empty DB returns empty-state summary with warning
   assert.deepEqual(out.by_class, []);
   assert.deepEqual(out.top_positions, []);
   assert.equal(out.reconciliation, null);
+  assert.ok(out.warnings.some((w) => w.includes("No positions in database")));
+});
+
+test("computePortfolioSummary: empty DB with declared import → reconciliation non-null, gap is negative declared", () => {
+  // Edge case: user had XPerformance imported before, then positions were
+  // wiped (e.g. fresh re-import in progress). Reconciliation must still
+  // surface the declared value vs computed=0 so the LLM can flag it.
+  const declared: LastDeclaredImport = {
+    id: 1,
+    declared_total_cents: 500000,
+    reference_date: "2026-05-21",
+    source_path: "/tmp/x.pdf",
+    imported_at: "2026-05-21 10:00:00",
+  };
+  const out = computePortfolioSummary([], declared);
+  assert.equal(out.positions_count, 0);
+  assert.equal(out.total_market_value_brl, 0);
+  assert.ok(out.reconciliation);
+  assert.equal(out.reconciliation!.declared_total_brl, 5000);
+  assert.equal(out.reconciliation!.computed_total_brl, 0);
+  assert.equal(out.reconciliation!.gap_brl, -5000);
+  assert.equal(out.reconciliation!.gap_pct, -1);
   assert.ok(out.warnings.some((w) => w.includes("No positions in database")));
 });
 

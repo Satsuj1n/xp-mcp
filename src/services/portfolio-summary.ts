@@ -189,6 +189,16 @@ export interface MaturityBuckets {
   medium_count: number;
   long_count: number;
   no_maturity_count: number;
+  /**
+   * Positions whose maturity_date parsed cleanly but lies before the
+   * horizon. Subset of `short_count` (past maturities are bucketed as short).
+   */
+  past_count: number;
+  /**
+   * Positions whose maturity_date is non-null but failed to parse (bad
+   * format or invalid date). Subset of `no_maturity_count`.
+   */
+  malformed_count: number;
   horizon_from: string;
 }
 
@@ -214,24 +224,34 @@ export function computeMaturityBuckets(
     medN = 0,
     longN = 0,
     noN = 0;
+  let pastN = 0,
+    malformedN = 0;
   for (const p of positions) {
     if (p.market_value_cents == null) continue;
     const mv = p.market_value_cents;
-    if (p.maturity_date == null || !DATE_RE.test(p.maturity_date)) {
+    if (p.maturity_date == null) {
       noC += mv;
       noN += 1;
+      continue;
+    }
+    if (!DATE_RE.test(p.maturity_date)) {
+      noC += mv;
+      noN += 1;
+      malformedN += 1;
       continue;
     }
     const matMs = Date.parse(`${p.maturity_date}T00:00:00Z`);
     if (Number.isNaN(matMs)) {
       noC += mv;
       noN += 1;
+      malformedN += 1;
       continue;
     }
     const days = (matMs - horizonMs) / DAY_MS;
     if (days < 365) {
       shortC += mv;
       shortN += 1;
+      if (matMs < horizonMs) pastN += 1;
     } else if (days < 365 * 3) {
       medC += mv;
       medN += 1;
@@ -249,6 +269,8 @@ export function computeMaturityBuckets(
     medium_count: medN,
     long_count: longN,
     no_maturity_count: noN,
+    past_count: pastN,
+    malformed_count: malformedN,
     horizon_from: horizonFromDate,
   };
 }
@@ -324,6 +346,8 @@ export function computePortfolioSummary(
         medium_count: 0,
         long_count: 0,
         no_maturity_count: 0,
+        past_count: 0,
+        malformed_count: 0,
         horizon_from: now.slice(0, 10),
       },
       reconciliation,
@@ -368,7 +392,9 @@ export function computePortfolioSummary(
   );
 
   // 6) Conditional warnings
-  if (reconciliation == null && lastDecl == null) {
+  // `computeReconciliation` returns null iff lastDecl is null, so the
+  // guard collapses to a single null check.
+  if (lastDecl == null) {
     warnings.push(
       "No XPerformance PDF imported yet; reconciliation unavailable",
     );
@@ -388,30 +414,16 @@ export function computePortfolioSummary(
   }
 
   // 7) Past-maturity & malformed-maturity counts → warnings
-  const horizonMs = Date.parse(`${horizonFromDate}T00:00:00Z`);
-  let pastCount = 0,
-    malformedCount = 0;
-  for (const p of withMv) {
-    if (p.maturity_date == null) continue;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(p.maturity_date)) {
-      malformedCount += 1;
-      continue;
-    }
-    const mat = Date.parse(`${p.maturity_date}T00:00:00Z`);
-    if (Number.isNaN(mat)) {
-      malformedCount += 1;
-      continue;
-    }
-    if (mat < horizonMs) pastCount += 1;
-  }
-  if (pastCount > 0) {
+  // (counted inside computeMaturityBuckets in single pass; we just surface)
+  const { past_count, malformed_count } = maturity_buckets;
+  if (past_count > 0) {
     warnings.push(
-      `${pastCount} position${pastCount === 1 ? "" : "s"} have past maturity (counted as short bucket)`,
+      `${past_count} position${past_count === 1 ? "" : "s"} have past maturity (counted as short bucket)`,
     );
   }
-  if (malformedCount > 0) {
+  if (malformed_count > 0) {
     warnings.push(
-      `${malformedCount} position${malformedCount === 1 ? "" : "s"} have malformed maturity_date (counted as no_maturity)`,
+      `${malformed_count} position${malformed_count === 1 ? "" : "s"} have malformed maturity_date (counted as no_maturity)`,
     );
   }
 
