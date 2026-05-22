@@ -139,6 +139,9 @@ test("is idempotent (re-running does not error or change data)", () => {
   }
 });
 
+// Frozen snapshot of the v2 `imports` schema. Update intentionally only when
+// imports changes in a way that affects v3 migration tests — otherwise drift
+// will silently mask migration regressions.
 function makeV2Schema(db: Database.Database): void {
   // Minimum v2 schema needed for v3 migration: meta + imports.
   db.prepare(
@@ -171,6 +174,7 @@ test("v2→v3: creates cash_flows table with expected columns", () => {
     migrateV2ToV3(db);
     const cols = db.prepare("PRAGMA table_info(cash_flows)").all() as {
       name: string;
+      notnull: number;
     }[];
     const names = cols.map((c) => c.name).sort();
     assert.deepEqual(names, [
@@ -180,6 +184,22 @@ test("v2→v3: creates cash_flows table with expected columns", () => {
       "flow_datetime",
       "id",
       "import_id",
+      "kind",
+    ]);
+
+    // Verify NOT NULL constraints on financial/required columns.
+    // Note: `id` is INTEGER PRIMARY KEY AUTOINCREMENT — SQLite reports notnull=0
+    // even though the PK constraint prevents nulls at insertion time.
+    // `import_id` is nullable per spec (FK without NOT NULL).
+    const notNullCols = cols
+      .filter((c) => c.notnull === 1)
+      .map((c) => c.name)
+      .sort();
+    assert.deepEqual(notNullCols, [
+      "amount_cents",
+      "description",
+      "flow_date",
+      "flow_datetime",
       "kind",
     ]);
   } finally {
@@ -220,6 +240,7 @@ test("v2→v3: UNIQUE (flow_datetime, amount_cents, kind) enforced", () => {
       "Transferência enviada para conta investimento",
     );
 
+    // description intentionally differs — it's excluded from the UNIQUE key per spec §5.1
     assert.throws(() => {
       db.prepare(
         "INSERT INTO cash_flows (flow_datetime, flow_date, kind, amount_cents, description) VALUES (?, ?, ?, ?, ?)",
