@@ -65,7 +65,7 @@ export function insertCashFlows(
 }
 
 /**
- * List cash flow rows, ordered by flow_datetime DESC, paginated by `limit`.
+ * List cash flow rows, ordered by flow_datetime DESC (id DESC as tiebreaker), paginated by `limit`.
  */
 export function listCashFlows(
   db: Database,
