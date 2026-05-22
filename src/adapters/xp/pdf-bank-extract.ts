@@ -54,3 +54,52 @@ export function resolveAmbiguousYear(
   }
   return yy <= threshold || yy > refMod ? 2000 + yy : 1900 + yy;
 }
+
+import { parseBRLToCents } from "../../parsers/normalize.js";
+
+/**
+ * Matches one transaction row: date + "às" + time + description + signed amount + balance.
+ * The greedy-min (.+?) for description works because the first BRL value (signed)
+ * terminates the description; balance follows immediately.
+ */
+const LINE_RE =
+  /^(\d{2})\/(\d{2})\/(\d{2}) às (\d{2}:\d{2}:\d{2})(.+?)(-?R\$ [\d.,]+)(R\$ [\d.,]+)$/;
+
+/**
+ * Parses one PDF line. Returns null when:
+ *   - the line shape does not match LINE_RE (header, footer, blank, noise)
+ *   - the description is not an investment-account transfer (Pix, TED, fatura)
+ *   - the amount cannot be parsed to cents
+ *
+ * `referenceYear` is forwarded to `resolveAmbiguousYear` so the function stays
+ * deterministic under test.
+ */
+export function parseLine(
+  line: string,
+  referenceYear: number = new Date().getFullYear(),
+): ParsedCashFlow | null {
+  const m = line.match(LINE_RE);
+  if (!m) return null;
+
+  const [, dd, mm, yy, hms, descriptionRaw, signedAmount] =
+    m as RegExpMatchArray &
+      [string, string, string, string, string, string, string, string];
+  const description = descriptionRaw.trim();
+  const kind = isInvestmentTransfer(description);
+  if (kind == null) return null;
+
+  const amount = parseBRLToCents(signedAmount);
+  if (amount == null) return null;
+
+  const yyyy = resolveAmbiguousYear(Number(yy), referenceYear);
+  const flow_date = `${yyyy}-${mm}-${dd}`;
+  const flow_datetime = `${flow_date} ${hms}`;
+
+  return {
+    flow_datetime,
+    flow_date,
+    kind,
+    amount_cents: Math.abs(amount),
+    description,
+  };
+}
