@@ -17,3 +17,7 @@ data/
 # Env
 .env
 .env.local
+
+# PDF fixtures with real personal data (PII). Text-extracted anonymized
+# versions are committed under tests/fixtures/*.txt instead.
+tests/fixtures/*.pdf
