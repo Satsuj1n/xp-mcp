@@ -34,11 +34,14 @@ export function isInvestmentTransfer(description: string): CashFlowKind | null {
 }
 
 /**
- * Resolves a 2-digit year against an anchor reference year using the rule:
- *   YY <= (referenceYear % 100) + 5  →  20YY
- *   otherwise                        →  19YY
+ * Resolves a 2-digit year against an anchor reference year.
  *
- * Designed to sustain reliable parsing through roughly 2050.
+ * For reference years up to ~2094 (the common case): if `yy <= (referenceYear % 100) + 5`,
+ * map to `20YY`; otherwise map to `19YY`. Designed to sustain reliable parsing through ~2050.
+ *
+ * Beyond 2094, `(refMod + 5)` overflows past 99. The fallback branch uses a wrap-around
+ * window: `yy` is treated as `20YY` when it falls inside the rolling threshold OR when it
+ * is already greater than `refMod` (e.g. for refYear 2096, yy=97 → 2097, yy=01 → 2001).
  */
 export function resolveAmbiguousYear(
   yy: number,
