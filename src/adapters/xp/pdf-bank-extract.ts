@@ -5,6 +5,8 @@
  * bill payments) is intentionally ignored.
  */
 
+import { parseBRLToCents } from "../../parsers/normalize.js";
+
 export type CashFlowKind = "APORTE" | "RESGATE";
 
 export interface ParsedCashFlow {
@@ -54,8 +56,6 @@ export function resolveAmbiguousYear(
   }
   return yy <= threshold || yy > refMod ? 2000 + yy : 1900 + yy;
 }
-
-import { parseBRLToCents } from "../../parsers/normalize.js";
 
 /**
  * Matches one transaction row: date + "às" + time + description + signed amount + balance.

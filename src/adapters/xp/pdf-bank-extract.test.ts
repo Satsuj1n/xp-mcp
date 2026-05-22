@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   resolveAmbiguousYear,
   isInvestmentTransfer,
+  parseLine,
 } from "./pdf-bank-extract.js";
 
 test("resolveAmbiguousYear: maps low 2-digit years to 20XX", () => {
@@ -57,8 +58,6 @@ test("isInvestmentTransfer: returns null for non-transfers", () => {
   assert.equal(isInvestmentTransfer("TED recebida de FELIPE"), null);
   assert.equal(isInvestmentTransfer(""), null);
 });
-
-import { parseLine } from "./pdf-bank-extract.js";
 
 test("parseLine: extracts APORTE from a real-shape line", () => {
   const line =
