@@ -302,6 +302,28 @@ test("computePortfolioSummary: empty DB returns empty-state summary with warning
   assert.ok(out.warnings.some((w) => w.includes("No positions in database")));
 });
 
+test("computePortfolioSummary: empty DB with declared import → reconciliation non-null, gap is negative declared", () => {
+  // Edge case: user had XPerformance imported before, then positions were
+  // wiped (e.g. fresh re-import in progress). Reconciliation must still
+  // surface the declared value vs computed=0 so the LLM can flag it.
+  const declared: LastDeclaredImport = {
+    id: 1,
+    declared_total_cents: 500000,
+    reference_date: "2026-05-21",
+    source_path: "/tmp/x.pdf",
+    imported_at: "2026-05-21 10:00:00",
+  };
+  const out = computePortfolioSummary([], declared);
+  assert.equal(out.positions_count, 0);
+  assert.equal(out.total_market_value_brl, 0);
+  assert.ok(out.reconciliation);
+  assert.equal(out.reconciliation!.declared_total_brl, 5000);
+  assert.equal(out.reconciliation!.computed_total_brl, 0);
+  assert.equal(out.reconciliation!.gap_brl, -5000);
+  assert.equal(out.reconciliation!.gap_pct, -1);
+  assert.ok(out.warnings.some((w) => w.includes("No positions in database")));
+});
+
 test("computePortfolioSummary: full portfolio with declared import", () => {
   const positions: PositionRow[] = [
     {
