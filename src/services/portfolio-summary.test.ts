@@ -250,22 +250,51 @@ test("computeMaturityBuckets: short (<1y), medium (1-3y), long (>3y), no_maturit
   assert.equal(out.horizon_from, "2026-05-21");
 });
 
-test("computeMaturityBuckets: past maturity → short bucket", () => {
+test("computeMaturityBuckets: past maturity → short bucket + past_count", () => {
   const out = computeMaturityBuckets(
     [mkMatPos(100000, "2025-01-01")],
     "2026-05-21",
   );
   assert.equal(out.short_brl, 1000);
   assert.equal(out.short_count, 1);
+  assert.equal(out.past_count, 1);
+  assert.equal(out.malformed_count, 0);
 });
 
-test("computeMaturityBuckets: malformed maturity → no_maturity bucket", () => {
+test("computeMaturityBuckets: malformed maturity → no_maturity bucket + malformed_count", () => {
   const out = computeMaturityBuckets(
     [mkMatPos(100000, "not-a-date")],
     "2026-05-21",
   );
   assert.equal(out.no_maturity_brl, 1000);
   assert.equal(out.no_maturity_count, 1);
+  assert.equal(out.malformed_count, 1);
+  assert.equal(out.past_count, 0);
+});
+
+test("computeMaturityBuckets: null maturity does NOT count as malformed", () => {
+  const out = computeMaturityBuckets(
+    [mkMatPos(100000, null, "ACAO")],
+    "2026-05-21",
+  );
+  assert.equal(out.no_maturity_count, 1);
+  assert.equal(out.malformed_count, 0);
+  assert.equal(out.past_count, 0);
+});
+
+test("computeMaturityBuckets: mixed past + malformed + future short", () => {
+  const out = computeMaturityBuckets(
+    [
+      mkMatPos(100000, "2025-01-01"), // past → short + past_count
+      mkMatPos(200000, "not-a-date"), // malformed → no_maturity + malformed_count
+      mkMatPos(300000, "2026-08-15"), // future short, not past
+    ],
+    "2026-05-21",
+  );
+  assert.equal(out.short_count, 2); // past + future-short
+  assert.equal(out.past_count, 1);
+  assert.equal(out.no_maturity_count, 1);
+  assert.equal(out.malformed_count, 1);
 });
 
 test("computeMaturityBuckets: empty positions → all zeros", () => {
