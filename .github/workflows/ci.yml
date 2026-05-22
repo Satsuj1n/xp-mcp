@@ -48,5 +48,7 @@ jobs:
           echo "$OUTPUT" | grep -q '"name":"get_advisor_profile"'       || { echo "Smoke failed: get_advisor_profile not registered"; exit 1; }
           echo "$OUTPUT" | grep -q '"name":"get_market_data"'           || { echo "Smoke failed: get_market_data not registered"; exit 1; }
           echo "$OUTPUT" | grep -q '"name":"screen_assets"'             || { echo "Smoke failed: screen_assets not registered"; exit 1; }
-          echo "$OUTPUT" | grep -q '"name":"get_portfolio_summary"'    || { echo "Smoke failed: get_portfolio_summary not registered"; exit 1; }
-          echo "All 9 tools registered correctly"
+          echo "$OUTPUT" | grep -q '"name":"get_portfolio_summary"'     || { echo "Smoke failed: get_portfolio_summary not registered"; exit 1; }
+          echo "$OUTPUT" | grep -q '"name":"import_bank_extract_pdf"'   || { echo "Smoke failed: import_bank_extract_pdf not registered"; exit 1; }
+          echo "$OUTPUT" | grep -q '"name":"get_cash_flows"'            || { echo "Smoke failed: get_cash_flows not registered"; exit 1; }
+          echo "All 11 tools registered correctly"
