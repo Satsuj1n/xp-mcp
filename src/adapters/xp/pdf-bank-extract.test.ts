@@ -4,6 +4,7 @@ import {
   resolveAmbiguousYear,
   isInvestmentTransfer,
   parseLine,
+  extractAccountMetadata,
 } from "./pdf-bank-extract.js";
 
 test("resolveAmbiguousYear: maps low 2-digit years to 20XX", () => {
@@ -102,4 +103,38 @@ test("parseLine: handles thousand separators in BRL amounts", () => {
   const parsed = parseLine(line, 2026);
   assert.ok(parsed);
   assert.equal(parsed.amount_cents, 162402);
+});
+
+const SAMPLE_HEADER = `
+22/05/2026 12:46:05Conta Digital XP | Extrato
+Conta Digital Extrato
+Data da consulta: 22/05/2026 12:46:05
+FELIPE TESTBanco XP S.A | Agência: 0001 | Conta: 16751847
+Documento: 000.000.000-00De: 23/11/2025 Até: 22/05/2026
+`;
+
+test("extractAccountMetadata: parses all four fields from a real header", () => {
+  const meta = extractAccountMetadata(SAMPLE_HEADER);
+  assert.equal(meta.account_holder, "FELIPE TEST");
+  assert.equal(meta.account_number, "16751847");
+  assert.equal(meta.period_from, "2025-11-23");
+  assert.equal(meta.period_to, "2026-05-22");
+});
+
+test("extractAccountMetadata: returns nulls when header is missing", () => {
+  const meta = extractAccountMetadata("just some unrelated text");
+  assert.equal(meta.account_holder, null);
+  assert.equal(meta.account_number, null);
+  assert.equal(meta.period_from, null);
+  assert.equal(meta.period_to, null);
+});
+
+test("extractAccountMetadata: handles partial header gracefully", () => {
+  const meta = extractAccountMetadata(
+    "De: 01/01/2026 Até: 31/01/2026\n(no account holder line)",
+  );
+  assert.equal(meta.period_from, "2026-01-01");
+  assert.equal(meta.period_to, "2026-01-31");
+  assert.equal(meta.account_holder, null);
+  assert.equal(meta.account_number, null);
 });

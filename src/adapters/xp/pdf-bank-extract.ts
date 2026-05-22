@@ -5,7 +5,7 @@
  * bill payments) is intentionally ignored.
  */
 
-import { parseBRLToCents } from "../../parsers/normalize.js";
+import { parseBRLToCents, parseDateBR } from "../../parsers/normalize.js";
 
 export type CashFlowKind = "APORTE" | "RESGATE";
 
@@ -101,5 +101,35 @@ export function parseLine(
     kind,
     amount_cents: Math.abs(amount),
     description,
+  };
+}
+
+export interface ParsedBankExtractMetadata {
+  account_holder: string | null;
+  account_number: string | null;
+  period_from: string | null;
+  period_to: string | null;
+}
+
+const PERIOD_RE = /De:\s*(\d{2}\/\d{2}\/\d{4})\s*Até:\s*(\d{2}\/\d{2}\/\d{4})/i;
+const ACCOUNT_RE = /^(.+?)Banco\s+XP\s+S\.?A/im;
+const ACCOUNT_NUMBER_RE = /Conta:\s*(\d+)/i;
+
+/**
+ * Extracts header metadata. Each field is independent: failure to parse one
+ * field does not impact the others. Missing fields return `null`.
+ */
+export function extractAccountMetadata(
+  text: string,
+): ParsedBankExtractMetadata {
+  const period = text.match(PERIOD_RE);
+  const account = text.match(ACCOUNT_RE);
+  const accountNumber = text.match(ACCOUNT_NUMBER_RE);
+
+  return {
+    account_holder: account ? (account[1] ?? "").trim() || null : null,
+    account_number: accountNumber ? (accountNumber[1] ?? null) : null,
+    period_from: period ? (parseDateBR(period[1]) ?? null) : null,
+    period_to: period ? (parseDateBR(period[2]) ?? null) : null,
   };
 }
