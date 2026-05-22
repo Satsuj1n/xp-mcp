@@ -392,7 +392,9 @@ export function computePortfolioSummary(
   );
 
   // 6) Conditional warnings
-  if (reconciliation == null && lastDecl == null) {
+  // `computeReconciliation` returns null iff lastDecl is null, so the
+  // guard collapses to a single null check.
+  if (lastDecl == null) {
     warnings.push(
       "No XPerformance PDF imported yet; reconciliation unavailable",
     );
