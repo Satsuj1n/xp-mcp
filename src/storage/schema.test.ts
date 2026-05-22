@@ -90,3 +90,18 @@ test("applySchema is idempotent (running twice does not throw)", () => {
     cleanup();
   }
 });
+
+test("cash_flows table exists after applySchema", () => {
+  const { db, cleanup } = withTempDb();
+  try {
+    applySchema(db);
+    const row = db
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='cash_flows'",
+      )
+      .get();
+    assert.ok(row, "cash_flows table should exist after applySchema");
+  } finally {
+    cleanup();
+  }
+});

@@ -33,6 +33,11 @@ import {
   getPortfolioSummary,
   getPortfolioSummarySchema,
 } from "./tools/get-portfolio-summary.js";
+import {
+  importBankExtractPdf,
+  importBankExtractPdfSchema,
+} from "./tools/import-bank-extract-pdf.js";
+import { getCashFlows, getCashFlowsSchema } from "./tools/get-cash-flows.js";
 
 /**
  * Tool registry. Adding a new tool = adding one entry here.
@@ -116,6 +121,23 @@ const TOOLS = {
     schema: getPortfolioSummarySchema,
     handler: getPortfolioSummary,
   },
+  import_bank_extract_pdf: {
+    description:
+      "Import a PDF exported from XP's Conta Digital Extrato (digital account statement). " +
+      "Filters for transfers between digital account and investment account only " +
+      "(deposits = APORTE, withdrawals = RESGATE). Idempotent: re-importing the same " +
+      "file skips duplicates. Persists to the cash_flows table.",
+    schema: importBankExtractPdfSchema,
+    handler: importBankExtractPdf,
+  },
+  get_cash_flows: {
+    description:
+      "List cash flows (APORTE/RESGATE) with optional date range and kind filters. " +
+      "Returns up to `limit` rows sorted by flow_datetime DESC, plus aggregate totals " +
+      "(aporte_total, resgate_total, net) computed over ALL matching rows.",
+    schema: getCashFlowsSchema,
+    handler: getCashFlows,
+  },
 } as const;
 
 type ToolName = keyof typeof TOOLS;
@@ -123,7 +145,7 @@ type ToolName = keyof typeof TOOLS;
 const server = new Server(
   {
     name: "portfolio-mcp",
-    version: "0.5.0",
+    version: "0.6.0",
   },
   {
     capabilities: {

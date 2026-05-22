@@ -47,7 +47,9 @@ jobs:
           echo "$OUTPUT" | grep -q '"name":"get_advisor_profile"'        || { echo "Smoke failed: get_advisor_profile not in tools/list"; exit 1; }
           echo "$OUTPUT" | grep -q '"name":"get_market_data"'            || { echo "Smoke failed: get_market_data not in tools/list"; exit 1; }
           echo "$OUTPUT" | grep -q '"name":"screen_assets"'              || { echo "Smoke failed: screen_assets not in tools/list"; exit 1; }
-          echo "$OUTPUT" | grep -q '"name":"get_portfolio_summary"'    || { echo "Smoke failed: get_portfolio_summary not in tools/list"; exit 1; }
+          echo "$OUTPUT" | grep -q '"name":"get_portfolio_summary"'     || { echo "Smoke failed: get_portfolio_summary not in tools/list"; exit 1; }
+          echo "$OUTPUT" | grep -q '"name":"import_bank_extract_pdf"'   || { echo "Smoke failed: import_bank_extract_pdf not in tools/list"; exit 1; }
+          echo "$OUTPUT" | grep -q '"name":"get_cash_flows"'            || { echo "Smoke failed: get_cash_flows not in tools/list"; exit 1; }
 
       - name: Publish to npm
         run: npm publish --provenance --access public

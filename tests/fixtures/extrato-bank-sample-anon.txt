@@ -1,0 +1,21 @@
+
+
+22/05/2026 12:46:05Conta Digital XP | Extrato
+Conta Digital Extrato
+Data da consulta: 22/05/2026 12:46:05
+FELIPE TESTBanco XP S.A | Agência: 0001 | Conta: 00000000
+Documento: 000.000.000-00De: 23/11/2025 Até: 22/05/2026
+Saldo disponível no final do período filtrado: R$ 717,14
+DataDescriçãoValorSaldo
+21/05/26 às 09:34:47Pix recebido de Bernardo TestR$ 170,00R$ 717,14
+19/05/26 às 07:03:19Transferência enviada para conta investimento-R$ 5.500,00R$ 394,33
+18/05/26 às 19:15:08PAGAMENTO DE FATURA-R$ 39,32R$ 5.894,33
+15/05/26 às 10:30:44Transferência recebida da conta investimentoR$ 25,90R$ 27,90
+28/04/26 às 11:23:00Transferência enviada para a conta investimento-R$ 69,92R$ 930,08
+28/04/26 às 11:16:08Transferência enviada para a conta investimento-R$ 1.624,02R$ 1.000,00
+27/04/26 às 09:41:16TED recebida de FELIPE TESTR$ 74,02R$ 74,02
+
+DataDescriçãoValorSaldo
+27/03/26 às 16:14:48Transferência recebida da conta investimentoR$ 1.064,98R$ 1.064,98
+14/01/26 às 11:48:42Transferência recebida da conta investimentoR$ 44,86R$ 44,86
+Extrato simples para conferência, sujeito a atualizações.

@@ -128,7 +128,8 @@ export function createImportRecord(
       | "csv_extract"
       | "pdf_xperformance"
       | "pdf_nota"
-      | "csv_proventos";
+      | "csv_proventos"
+      | "pdf_bank_extract";
     sourcePath: string;
     totalRows: number;
     declaredTotalCents?: number | null;

@@ -158,6 +158,8 @@ Claude (using portfolio-mcp.get_portfolio_summary):
 | `get_market_data`             | Quotes / fundamentals from brapi.dev for 1-50 tickers, SQLite-cached. Opt-in.          |   ✅   |
 | `screen_assets`               | Rank B3 FIIs / stocks / ETFs by DY, P/VP, P/L, ROE, market cap. Opt-in.                |   ✅   |
 | `import_nota_corretagem`      | Parse broker-note PDFs for transaction history                                         |   ⏳   |
+| `import_bank_extract_pdf`     | Import a PDF exported from XP's Conta Digital Extrato. Filters for investment-account transfers only (APORTE/RESGATE). Idempotent. |   ✅   |
+| `get_cash_flows`              | List cash flows with optional date/kind filters; returns aggregate totals (aporte/resgate/net) over all matching rows. |   ✅   |
 
 ---
 
@@ -337,7 +339,8 @@ The `UNIQUE (asset_class, external_id)` constraint + `ON CONFLICT DO UPDATE` mak
 - [x] `calculate_allocation_drift` against `~/.xp-mcp/allocation.json`
 - [x] v0.3 — npm publish + Smithery + awesome-mcp PR
 - [x] v0.4 — Investment advisor foundations: `set_advisor_profile`, `get_advisor_profile`, `get_market_data`, `screen_assets` (brapi.dev, SQLite cache)
-- [ ] v0.5 — `suggest_buys` orchestrator (combines profile + drift + market data + screening)
+- [x] v0.5 — Portfolio summary + reconciliation gap: `get_portfolio_summary` (aggregate stats, declared-vs-computed gap)
+- [x] v0.6 — Bank extract import + cash flows: `import_bank_extract_pdf` (XP Conta Digital Extrato → `cash_flows` table, schema v3), `get_cash_flows` (filterable query with aggregate totals)
 - [ ] Crypto adapter — new `MarketDataSource` for Binance / Mercado Bitcoin / Foxbit
 - [ ] Adapters for other Brazilian brokers (Rico, NuInvest, Inter, Avenue)
 - [ ] Open Finance Brasil investment module when the standard matures
