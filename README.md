@@ -160,6 +160,7 @@ Claude (using portfolio-mcp.get_portfolio_summary):
 | `import_nota_corretagem`      | Parse broker-note PDFs for transaction history                                         |   ⏳   |
 | `import_bank_extract_pdf`     | Import a PDF exported from XP's Conta Digital Extrato. Filters for investment-account transfers only (APORTE/RESGATE). Idempotent. |   ✅   |
 | `get_cash_flows`              | List cash flows with optional date/kind filters; returns aggregate totals (aporte/resgate/net) over all matching rows. |   ✅   |
+| `suggest_buys`                | Suggest BUYs per underweight class using profile objective × asset class matrix (FII/ACAO/ETF). Non-screenable classes (TESOURO/RF/FUNDO) reported in `skipped_classes`. Requires `outbound_enabled=true`. |   ✅   |
 
 ---
 
@@ -341,9 +342,22 @@ The `UNIQUE (asset_class, external_id)` constraint + `ON CONFLICT DO UPDATE` mak
 - [x] v0.4 — Investment advisor foundations: `set_advisor_profile`, `get_advisor_profile`, `get_market_data`, `screen_assets` (brapi.dev, SQLite cache)
 - [x] v0.5 — Portfolio summary + reconciliation gap: `get_portfolio_summary` (aggregate stats, declared-vs-computed gap)
 - [x] v0.6 — Bank extract import + cash flows: `import_bank_extract_pdf` (XP Conta Digital Extrato → `cash_flows` table, schema v3), `get_cash_flows` (filterable query with aggregate totals)
+- [x] v0.7 — Suggest Buys: `suggest_buys` (composes profile + drift + screening into deterministic BUY suggestions per underweight class; non-screenable classes surface in `skipped_classes`)
 - [ ] Crypto adapter — new `MarketDataSource` for Binance / Mercado Bitcoin / Foxbit
 - [ ] Adapters for other Brazilian brokers (Rico, NuInvest, Inter, Avenue)
 - [ ] Open Finance Brasil investment module when the standard matures
+
+---
+
+## Changelog
+
+### v0.7.0 — Suggest Buys (2026-05-23)
+
+- New tool: `suggest_buys` — composes advisor profile + allocation drift + asset screening into a deterministic list of BUY suggestions per underweight asset class.
+- Encodes a fixed `objective × asset_class` screening matrix (`income`/`growth`/`balanced` × `FII`/`ACAO`/`ETF`).
+- Non-screenable underweight classes (`TESOURO`, `RENDA_FIXA_PRIVADA`, `FUNDO`) surface in a dedicated `skipped_classes` field rather than being silently dropped.
+- Each suggestion includes `amount_brl` (= class gap / actual_returned), `score`, `rationale`, and `already_owned`.
+- 12 tools total (was 11). No schema migration.
 
 ---
 
