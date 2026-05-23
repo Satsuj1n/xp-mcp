@@ -51,4 +51,5 @@ jobs:
           echo "$OUTPUT" | grep -q '"name":"get_portfolio_summary"'     || { echo "Smoke failed: get_portfolio_summary not registered"; exit 1; }
           echo "$OUTPUT" | grep -q '"name":"import_bank_extract_pdf"'   || { echo "Smoke failed: import_bank_extract_pdf not registered"; exit 1; }
           echo "$OUTPUT" | grep -q '"name":"get_cash_flows"'            || { echo "Smoke failed: get_cash_flows not registered"; exit 1; }
-          echo "All 11 tools registered correctly"
+          echo "$OUTPUT" | grep -q '"name":"suggest_buys"'              || { echo "Smoke failed: suggest_buys not registered"; exit 1; }
+          echo "All 12 tools registered correctly"

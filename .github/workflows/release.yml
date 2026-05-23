@@ -50,6 +50,7 @@ jobs:
           echo "$OUTPUT" | grep -q '"name":"get_portfolio_summary"'     || { echo "Smoke failed: get_portfolio_summary not in tools/list"; exit 1; }
           echo "$OUTPUT" | grep -q '"name":"import_bank_extract_pdf"'   || { echo "Smoke failed: import_bank_extract_pdf not in tools/list"; exit 1; }
           echo "$OUTPUT" | grep -q '"name":"get_cash_flows"'            || { echo "Smoke failed: get_cash_flows not in tools/list"; exit 1; }
+          echo "$OUTPUT" | grep -q '"name":"suggest_buys"'              || { echo "Smoke failed: suggest_buys not in tools/list"; exit 1; }
 
       - name: Publish to npm
         run: npm publish --provenance --access public
