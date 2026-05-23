@@ -38,6 +38,7 @@ import {
   importBankExtractPdfSchema,
 } from "./tools/import-bank-extract-pdf.js";
 import { getCashFlows, getCashFlowsSchema } from "./tools/get-cash-flows.js";
+import { suggestBuys, suggestBuysSchema } from "./tools/suggest-buys.js";
 
 /**
  * Tool registry. Adding a new tool = adding one entry here.
@@ -138,6 +139,16 @@ const TOOLS = {
     schema: getCashFlowsSchema,
     handler: getCashFlows,
   },
+  suggest_buys: {
+    description:
+      "Suggest BUY actions per underweight asset class based on the advisor profile. " +
+      "Composes drift + screening per class (FII/ACAO/ETF) using a fixed " +
+      "objective × asset_class criteria matrix; non-screenable classes " +
+      "(TESOURO/RF/FUNDO) surface in skipped_classes with reason. " +
+      "Requires outbound_enabled=true. Output is educational analysis, not investment advice.",
+    schema: suggestBuysSchema,
+    handler: suggestBuys,
+  },
 } as const;
 
 type ToolName = keyof typeof TOOLS;
@@ -145,7 +156,7 @@ type ToolName = keyof typeof TOOLS;
 const server = new Server(
   {
     name: "portfolio-mcp",
-    version: "0.6.0",
+    version: "0.7.0",
   },
   {
     capabilities: {
