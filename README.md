@@ -1,6 +1,6 @@
 <div align="center">
 
-# xp-mcp
+# portfolio-mcp
 
 **Talk to your XP Investimentos portfolio through Claude — 100% local, read-only, zero scraping.**
 
@@ -17,7 +17,7 @@
 
 ## What is this?
 
-`xp-mcp` is a [Model Context Protocol](https://modelcontextprotocol.io/) server that exposes your **XP Investimentos** portfolio to Claude Desktop (or any MCP-compatible client). You feed it the official PDF/CSV exports XP already gives you — the server parses them, normalizes everything into a local SQLite database, and answers questions through MCP tools.
+`portfolio-mcp` is a [Model Context Protocol](https://modelcontextprotocol.io/) server that exposes your **XP Investimentos** portfolio to Claude Desktop (or any MCP-compatible client). You feed it the official PDF/CSV exports XP already gives you — the server parses them, normalizes everything into a local SQLite database, and answers questions through MCP tools.
 
 - 🔒 **Local-first** — data lives in `~/.xp-mcp/data.db`. Core tools make zero outbound HTTP calls; advisor tools (v0.4+) are opt-in.
 - 📵 **No credentials, no scraping** — you control what goes in (PDF/CSV exports).
@@ -125,7 +125,7 @@ Claude (using portfolio-mcp.get_portfolio_summary):
          │ stdio (JSON-RPC 2.0)
          ▼
 ┌─────────────────────┐       PDF / CSV       ┌──────────────────────┐
-│      xp-mcp         │◀──────────────────────│   XP exports         │
+│   portfolio-mcp     │◀──────────────────────│   XP exports         │
 │  TypeScript + MCP   │                       │   (your machine)     │
 └────────┬────────────┘                       └──────────────────────┘
          │ SQL (better-sqlite3, WAL mode)
@@ -367,7 +367,7 @@ For contributors or anyone who wants to run a local checkout instead of the publ
 
 ```bash
 git clone https://github.com/Satsuj1n/portfolio-mcp
-cd xp-mcp
+cd portfolio-mcp
 npm install
 npm run build
 npm run test
