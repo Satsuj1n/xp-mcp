@@ -39,6 +39,8 @@ import {
 } from "./tools/import-bank-extract-pdf.js";
 import { getCashFlows, getCashFlowsSchema } from "./tools/get-cash-flows.js";
 import { suggestBuys, suggestBuysSchema } from "./tools/suggest-buys.js";
+import { calculateTwr, calculateTwrSchema } from "./tools/calculate-twr.js";
+import { calculateMwr, calculateMwrSchema } from "./tools/calculate-mwr.js";
 
 /**
  * Tool registry. Adding a new tool = adding one entry here.
@@ -149,6 +151,28 @@ const TOOLS = {
     schema: suggestBuysSchema,
     handler: suggestBuys,
   },
+  calculate_twr: {
+    description:
+      "Time-weighted return (TWR) over the XPerformance import history. " +
+      "Removes the effect of when you contributed/withdrew — pure portfolio " +
+      "performance metric, GIPS-compliant. Uses Modified Dietz between " +
+      "consecutive imports and chains sub-periods geometrically. Requires " +
+      "≥ 2 XPerformance imports. Returns period_return, annualized return, " +
+      "per-sub-period breakdown, and quality warnings (sparse history, " +
+      "large cash flows, stale tail).",
+    schema: calculateTwrSchema,
+    handler: calculateTwr,
+  },
+  calculate_mwr: {
+    description:
+      "Money-weighted return (MWR / IRR) — the rate that reflects when " +
+      "you put money in vs. out. Computed via bisection over signed cash " +
+      "flows including synthetic initial/terminal NAV. Requires ≥ 2 " +
+      "XPerformance imports. Returns mwr_period, mwr_annualized, " +
+      "cash_flow_breakdown, convergence diagnostics, and warnings.",
+    schema: calculateMwrSchema,
+    handler: calculateMwr,
+  },
 } as const;
 
 type ToolName = keyof typeof TOOLS;
@@ -156,7 +180,7 @@ type ToolName = keyof typeof TOOLS;
 const server = new Server(
   {
     name: "portfolio-mcp",
-    version: "0.7.0",
+    version: "0.9.0",
   },
   {
     capabilities: {
