@@ -41,6 +41,10 @@ import { getCashFlows, getCashFlowsSchema } from "./tools/get-cash-flows.js";
 import { suggestBuys, suggestBuysSchema } from "./tools/suggest-buys.js";
 import { calculateTwr, calculateTwrSchema } from "./tools/calculate-twr.js";
 import { calculateMwr, calculateMwrSchema } from "./tools/calculate-mwr.js";
+import {
+  getCryptoQuote,
+  getCryptoQuoteSchema,
+} from "./tools/get-crypto-quote.js";
 
 /**
  * Tool registry. Adding a new tool = adding one entry here.
@@ -173,6 +177,15 @@ const TOOLS = {
     schema: calculateMwrSchema,
     handler: calculateMwr,
   },
+  get_crypto_quote: {
+    description:
+      "Spot crypto quotes in BRL via Mercado Bitcoin (e.g. BTC, ETH, SOL). " +
+      "Per-ticker partial failure: one unknown symbol doesn't fail the " +
+      "batch. 15-minute cache, outbound-gated. Quote only — crypto is not " +
+      "yet a tracked portfolio asset_class.",
+    schema: getCryptoQuoteSchema,
+    handler: getCryptoQuote,
+  },
 } as const;
 
 type ToolName = keyof typeof TOOLS;
@@ -180,7 +193,7 @@ type ToolName = keyof typeof TOOLS;
 const server = new Server(
   {
     name: "portfolio-mcp",
-    version: "0.9.0",
+    version: "0.10.0",
   },
   {
     capabilities: {

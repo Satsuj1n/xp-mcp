@@ -67,6 +67,26 @@ test("different data_type does not collide", () => {
   assert.ok(cache.get("BBAS3", "fundamentals", 1440));
 });
 
+test("put: explicit source is written to the row", () => {
+  const db = makeDb();
+  const cache = new MarketDataCache(db);
+  cache.put("BTC", "crypto_quote", { price_brl: 350000 }, "mercadobitcoin");
+  const row = db
+    .prepare("SELECT source FROM market_data_cache WHERE ticker = ?")
+    .get("BTC") as { source: string } | undefined;
+  assert.equal(row?.source, "mercadobitcoin");
+});
+
+test("put: default source remains brapi.dev", () => {
+  const db = makeDb();
+  const cache = new MarketDataCache(db);
+  cache.put("BBAS3", "quote", { price: 30.5 });
+  const row = db
+    .prepare("SELECT source FROM market_data_cache WHERE ticker = ?")
+    .get("BBAS3") as { source: string } | undefined;
+  assert.equal(row?.source, "brapi.dev");
+});
+
 test("clearExpired removes only expired rows and returns count", () => {
   const db = makeDb();
   const cache = new MarketDataCache(db);
