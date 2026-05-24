@@ -161,6 +161,8 @@ Claude (using portfolio-mcp.get_portfolio_summary):
 | `import_bank_extract_pdf`     | Import a PDF exported from XP's Conta Digital Extrato. Filters for investment-account transfers only (APORTE/RESGATE). Idempotent. |   ✅   |
 | `get_cash_flows`              | List cash flows with optional date/kind filters; returns aggregate totals (aporte/resgate/net) over all matching rows. |   ✅   |
 | `suggest_buys`                | Suggest BUYs per underweight class using profile objective × asset class matrix (FII/ACAO/ETF). Non-screenable classes (TESOURO/RF/FUNDO) reported in `skipped_classes`. Requires `outbound_enabled=true`. |   ✅   |
+| `calculate_twr`               | Time-weighted return (TWR) over XPerformance imports. Modified Dietz chained — GIPS-compliant for portfolios without daily NAV. Requires ≥ 2 imports. |   ✅   |
+| `calculate_mwr`               | Money-weighted return (MWR / IRR) via bisection over signed cash flows. Reports converged=false cleanly when no sign change. Requires ≥ 2 imports.   |   ✅   |
 
 ---
 
@@ -344,6 +346,7 @@ The `UNIQUE (asset_class, external_id)` constraint + `ON CONFLICT DO UPDATE` mak
 - [x] v0.6 — Bank extract import + cash flows: `import_bank_extract_pdf` (XP Conta Digital Extrato → `cash_flows` table, schema v3), `get_cash_flows` (filterable query with aggregate totals)
 - [x] v0.7 — Suggest Buys: `suggest_buys` (composes profile + drift + screening into deterministic BUY suggestions per underweight class; non-screenable classes surface in `skipped_classes`)
 - [x] v0.8 — `cash_flow_summary` in `get_portfolio_summary`: YTD + rolling 12m aporte/resgate aggregates in the panorama output (no new tool, additive field).
+- [x] v0.9 — `calculate_twr` + `calculate_mwr`: time-weighted and money-weighted returns over XPerformance imports + cash_flows (Modified Dietz chained + bisection IRR; no schema change; tools MCP 12 → 14).
 - [ ] Crypto adapter — new `MarketDataSource` for Binance / Mercado Bitcoin / Foxbit
 - [ ] Adapters for other Brazilian brokers (Rico, NuInvest, Inter, Avenue)
 - [ ] Open Finance Brasil investment module when the standard matures
@@ -351,6 +354,15 @@ The `UNIQUE (asset_class, external_id)` constraint + `ON CONFLICT DO UPDATE` mak
 ---
 
 ## Changelog
+
+### v0.9.0 — calculate_twr + calculate_mwr (2026-05-24)
+
+- New tool `calculate_twr`: time-weighted return (Modified Dietz between consecutive XPerformance snapshots, geometric chain across sub-periods). GIPS-compliant for portfolios without daily NAV.
+- New tool `calculate_mwr`: money-weighted return (IRR via bisection on signed cash flows + synthetic initial/terminal NAV). Reports `converged: false` cleanly when no sign change in `[-99%, 1000%]`.
+- New repo function `listValuationSnapshots` reads XPerformance imports as the NAV history — no schema change.
+- New pure service `services/returns.ts` with hand-computable test references (CFA Modified Dietz example + 1Y 10% MWR case).
+- Quality warnings: sparse history, large cash flows, tiny period, MWR non-convergence, stale tail.
+- Tools MCP: 12 → 14.
 
 ### v0.8.0 — cash_flow_summary in get_portfolio_summary (2026-05-24)
 
