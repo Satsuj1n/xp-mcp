@@ -149,7 +149,7 @@ Claude (using portfolio-mcp.get_portfolio_summary):
 | `import_xperformance_pdf`     | Parse XP's official portfolio PDF (XPerformance). Idempotent on re-import.             |   ✅   |
 | `import_extract_csv`          | Parse a Posição Consolidada / Extrato CSV. Auto-detects delimiter and column aliases.  |   ✅   |
 | `get_positions`               | List positions with quantity, market value, indexer, maturity. Optional class filter.  |   ✅   |
-| `get_portfolio_summary`       | Aggregate stats + declared-vs-computed reconciliation gap                              |   ✅   |
+| `get_portfolio_summary`       | Aggregate stats + declared-vs-computed reconciliation gap. Output now includes a `cash_flow_summary` block (YTD + rolling 12m aporte/resgate aggregates) when cash flows have been imported. |   ✅   |
 | `get_transactions`            | History of buys/sells                                                                  |   ⏳   |
 | `get_dividends`               | Income / proventos                                                                     |   ⏳   |
 | `calculate_allocation_drift`  | Compare current vs target allocation from `~/.xp-mcp/allocation.json`. Returns drift %, BRL delta, and BUY/SELL suggestions per class. |   ✅   |
@@ -343,6 +343,7 @@ The `UNIQUE (asset_class, external_id)` constraint + `ON CONFLICT DO UPDATE` mak
 - [x] v0.5 — Portfolio summary + reconciliation gap: `get_portfolio_summary` (aggregate stats, declared-vs-computed gap)
 - [x] v0.6 — Bank extract import + cash flows: `import_bank_extract_pdf` (XP Conta Digital Extrato → `cash_flows` table, schema v3), `get_cash_flows` (filterable query with aggregate totals)
 - [x] v0.7 — Suggest Buys: `suggest_buys` (composes profile + drift + screening into deterministic BUY suggestions per underweight class; non-screenable classes surface in `skipped_classes`)
+- [x] v0.8 — `cash_flow_summary` in `get_portfolio_summary`: YTD + rolling 12m aporte/resgate aggregates in the panorama output (no new tool, additive field).
 - [ ] Crypto adapter — new `MarketDataSource` for Binance / Mercado Bitcoin / Foxbit
 - [ ] Adapters for other Brazilian brokers (Rico, NuInvest, Inter, Avenue)
 - [ ] Open Finance Brasil investment module when the standard matures
@@ -350,6 +351,14 @@ The `UNIQUE (asset_class, external_id)` constraint + `ON CONFLICT DO UPDATE` mak
 ---
 
 ## Changelog
+
+### v0.8.0 — cash_flow_summary in get_portfolio_summary (2026-05-24)
+
+- Additive field on `get_portfolio_summary`: `cash_flow_summary` block with YTD + rolling 12-month aporte/resgate aggregates.
+- New repo function `listCashFlowsSince` (unbounded date-bounded query) in `src/storage/cash-flows-repo.ts`.
+- New pure service `computeCashFlowSummary` in `src/services/cash-flow-summary.ts` — YTD + rolling 12m aggregates over `CashFlowRow[]`, no DB access. Averages divide by `months_with_data` (not 12) so short histories are not penalised.
+- `get_portfolio_summary` warns when no cash flows have been imported yet (`cash_flow_summary: null`).
+- 12 tools total (unchanged). No schema migration. No new MCP tool — additive field on existing tool.
 
 ### v0.7.0 — Suggest Buys (2026-05-23)
 

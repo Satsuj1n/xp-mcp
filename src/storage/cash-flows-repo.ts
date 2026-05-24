@@ -85,6 +85,29 @@ export function listCashFlows(
 }
 
 /**
+ * List cash flow rows with flow_date >= dateFrom, ordered by
+ * flow_date ASC then id ASC. Unbounded (no LIMIT) — intended for
+ * service-layer aggregation over a known-bounded window (e.g. 12
+ * months of personal cash flows is small).
+ *
+ * `dateFrom` must be an ISO date string `YYYY-MM-DD`.
+ */
+export function listCashFlowsSince(
+  db: Database,
+  dateFrom: string,
+): CashFlowRow[] {
+  return db
+    .prepare(
+      `SELECT id, flow_datetime, flow_date, kind, amount_cents,
+              description, import_id
+         FROM cash_flows
+         WHERE flow_date >= ?
+         ORDER BY flow_date ASC, id ASC`,
+    )
+    .all(dateFrom) as CashFlowRow[];
+}
+
+/**
  * Sum amount_cents grouped by kind over all rows matching `filters`.
  * Limit is intentionally ignored — totals reflect the whole result set.
  */

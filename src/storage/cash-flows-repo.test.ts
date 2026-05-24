@@ -8,6 +8,7 @@ import { applySchema } from "./schema.js";
 import {
   insertCashFlows,
   listCashFlows,
+  listCashFlowsSince,
   sumCashFlows,
 } from "./cash-flows-repo.js";
 import type { ParsedCashFlow } from "../adapters/xp/pdf-bank-extract.js";
@@ -328,6 +329,135 @@ test("sumCashFlows returns zeros when no rows match", () => {
     const totals = sumCashFlows(db, {});
     assert.equal(totals.aporte_cents, 0);
     assert.equal(totals.resgate_cents, 0);
+  } finally {
+    cleanup();
+  }
+});
+
+test("listCashFlowsSince: returns only rows with flow_date >= dateFrom", () => {
+  const { db, cleanup } = withTempDb();
+  try {
+    const importId = createImportRecord(db, {
+      sourceType: "pdf_bank_extract",
+      sourcePath: "/tmp/x.pdf",
+      totalRows: 3,
+    });
+    insertCashFlows(
+      db,
+      [
+        makeFlow({
+          flow_datetime: "2025-04-30 09:00:00",
+          flow_date: "2025-04-30",
+          amount_cents: 100,
+        }),
+        makeFlow({
+          flow_datetime: "2025-05-01 09:00:00",
+          flow_date: "2025-05-01",
+          amount_cents: 200,
+        }),
+        makeFlow({
+          flow_datetime: "2025-05-02 09:00:00",
+          flow_date: "2025-05-02",
+          amount_cents: 300,
+        }),
+      ],
+      importId,
+    );
+
+    const rows = listCashFlowsSince(db, "2025-05-01");
+    assert.equal(rows.length, 2);
+    assert.equal(rows[0].flow_date, "2025-05-01");
+    assert.equal(rows[1].flow_date, "2025-05-02");
+  } finally {
+    cleanup();
+  }
+});
+
+test("listCashFlowsSince: sorted by flow_date ASC, id ASC", () => {
+  const { db, cleanup } = withTempDb();
+  try {
+    const importId = createImportRecord(db, {
+      sourceType: "pdf_bank_extract",
+      sourcePath: "/tmp/x.pdf",
+      totalRows: 4,
+    });
+    // Insertion order is intentionally scrambled to prove the SQL ORDER BY
+    // (not insertion order) governs the result.
+    // Idempotency key is (flow_datetime, amount_cents, kind), so each row
+    // gets a distinct flow_datetime to avoid being skipped.
+    insertCashFlows(
+      db,
+      [
+        makeFlow({
+          flow_datetime: "2025-05-01 09:00:00",
+          flow_date: "2025-05-01",
+          amount_cents: 1001,
+        }),
+        makeFlow({
+          flow_datetime: "2025-04-30 09:00:00",
+          flow_date: "2025-04-30",
+          amount_cents: 2001,
+        }),
+        makeFlow({
+          flow_datetime: "2025-05-01 15:00:00",
+          flow_date: "2025-05-01",
+          amount_cents: 1002,
+        }),
+        makeFlow({
+          flow_datetime: "2025-04-30 15:00:00",
+          flow_date: "2025-04-30",
+          amount_cents: 2002,
+        }),
+      ],
+      importId,
+    );
+
+    const rows = listCashFlowsSince(db, "2025-04-30");
+    assert.equal(rows.length, 4);
+    // Two April rows first (by id ASC), then two May rows (by id ASC).
+    // Insertion order above: id 1 = May/1001, id 2 = Apr/2001,
+    // id 3 = May/1002, id 4 = Apr/2002.
+    // Expected ASC by flow_date then id: Apr id=2, Apr id=4, May id=1, May id=3.
+    assert.equal(rows[0].flow_date, "2025-04-30");
+    assert.equal(rows[0].amount_cents, 2001);
+    assert.equal(rows[1].flow_date, "2025-04-30");
+    assert.equal(rows[1].amount_cents, 2002);
+    assert.equal(rows[2].flow_date, "2025-05-01");
+    assert.equal(rows[2].amount_cents, 1001);
+    assert.equal(rows[3].flow_date, "2025-05-01");
+    assert.equal(rows[3].amount_cents, 1002);
+    // And ids strictly ascending within each date.
+    assert.ok(rows[0].id < rows[1].id);
+    assert.ok(rows[2].id < rows[3].id);
+  } finally {
+    cleanup();
+  }
+});
+
+test("listCashFlowsSince: empty result on no matches", () => {
+  const { db, cleanup } = withTempDb();
+  try {
+    // Empty DB → empty result.
+    assert.deepEqual(listCashFlowsSince(db, "2025-05-01"), []);
+
+    // And: row dated strictly before dateFrom → still empty.
+    const importId = createImportRecord(db, {
+      sourceType: "pdf_bank_extract",
+      sourcePath: "/tmp/x.pdf",
+      totalRows: 1,
+    });
+    insertCashFlows(
+      db,
+      [
+        makeFlow({
+          flow_datetime: "2025-04-30 09:00:00",
+          flow_date: "2025-04-30",
+          amount_cents: 100,
+        }),
+      ],
+      importId,
+    );
+    assert.deepEqual(listCashFlowsSince(db, "2025-05-01"), []);
   } finally {
     cleanup();
   }

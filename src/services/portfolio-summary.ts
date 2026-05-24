@@ -2,6 +2,7 @@ import { round2 } from "./money.js";
 import type { PositionRow } from "../storage/positions-repo.js";
 import type { AssetClass } from "../storage/schema.js";
 import type { LastDeclaredImport } from "../storage/imports-repo.js";
+import type { CashFlowSummary } from "./cash-flow-summary.js";
 
 export interface ByClassRow {
   asset_class: AssetClass;
@@ -293,6 +294,7 @@ export interface PortfolioSummary {
   fgc_coverage: FgcCoverage;
   maturity_buckets: MaturityBuckets;
   reconciliation: Reconciliation | null;
+  cash_flow_summary: CashFlowSummary | null;
   warnings: string[];
 }
 
@@ -302,6 +304,7 @@ const LARGE_GAP_THRESHOLD = 0.01;
 export function computePortfolioSummary(
   allPositions: PositionRow[],
   lastDecl: LastDeclaredImport | null,
+  cashFlowSummary: CashFlowSummary | null,
 ): PortfolioSummary {
   const warnings: string[] = [];
 
@@ -319,6 +322,11 @@ export function computePortfolioSummary(
     warnings.unshift(
       "No positions in database. Run import_xperformance_pdf or import_extract_csv first.",
     );
+    if (cashFlowSummary === null) {
+      warnings.push(
+        "No cash flows imported yet; cash_flow_summary unavailable",
+      );
+    }
     const now = new Date().toISOString().replace("T", " ").slice(0, 19);
     const reconciliation = computeReconciliation(0, now, lastDecl);
     return {
@@ -351,6 +359,7 @@ export function computePortfolioSummary(
         horizon_from: now.slice(0, 10),
       },
       reconciliation,
+      cash_flow_summary: cashFlowSummary,
       warnings,
     };
   }
@@ -399,6 +408,9 @@ export function computePortfolioSummary(
       "No XPerformance PDF imported yet; reconciliation unavailable",
     );
   }
+  if (cashFlowSummary === null) {
+    warnings.push("No cash flows imported yet; cash_flow_summary unavailable");
+  }
   if (reconciliation?.is_stale) {
     warnings.push(
       `Declared total dates from ${reconciliation.declared_reference_date}; computed reflects state as of ${horizonFromDate}`,
@@ -443,6 +455,7 @@ export function computePortfolioSummary(
     fgc_coverage,
     maturity_buckets,
     reconciliation,
+    cash_flow_summary: cashFlowSummary,
     warnings,
   };
 }
