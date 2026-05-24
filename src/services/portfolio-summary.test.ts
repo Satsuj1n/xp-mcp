@@ -5,6 +5,33 @@ import type { PositionRow } from "../storage/positions-repo.js";
 import type { AssetClass } from "../storage/schema.js";
 import { computeReconciliation } from "./portfolio-summary.js";
 import type { LastDeclaredImport } from "../storage/imports-repo.js";
+import type { CashFlowSummary } from "./cash-flow-summary.js";
+
+function mkCashFlowSummary(
+  overrides: Partial<CashFlowSummary> = {},
+): CashFlowSummary {
+  return {
+    as_of_date: "2026-05-24",
+    total_records: 0,
+    ytd: {
+      year: 2026,
+      aporte_brl: 0,
+      resgate_brl: 0,
+      net_brl: 0,
+    },
+    rolling_12m: {
+      from_month: "2025-06",
+      to_month: "2026-05",
+      months_with_data: 0,
+      aporte_brl: 0,
+      resgate_brl: 0,
+      net_brl: 0,
+      monthly_avg_aporte_brl: 0,
+      monthly_avg_net_brl: 0,
+    },
+    ...overrides,
+  };
+}
 
 function mkPosition(
   cls: AssetClass,
@@ -322,12 +349,13 @@ test("computeMaturityBuckets: exactly-at-boundary edge cases", () => {
 import { computePortfolioSummary } from "./portfolio-summary.js";
 
 test("computePortfolioSummary: empty DB returns empty-state summary with warning", () => {
-  const out = computePortfolioSummary([], null);
+  const out = computePortfolioSummary([], null, null);
   assert.equal(out.total_market_value_brl, 0);
   assert.equal(out.positions_count, 0);
   assert.deepEqual(out.by_class, []);
   assert.deepEqual(out.top_positions, []);
   assert.equal(out.reconciliation, null);
+  assert.equal(out.cash_flow_summary, null);
   assert.ok(out.warnings.some((w) => w.includes("No positions in database")));
 });
 
@@ -342,7 +370,7 @@ test("computePortfolioSummary: empty DB with declared import → reconciliation 
     source_path: "/tmp/x.pdf",
     imported_at: "2026-05-21 10:00:00",
   };
-  const out = computePortfolioSummary([], declared);
+  const out = computePortfolioSummary([], declared, null);
   assert.equal(out.positions_count, 0);
   assert.equal(out.total_market_value_brl, 0);
   assert.ok(out.reconciliation);
@@ -350,6 +378,7 @@ test("computePortfolioSummary: empty DB with declared import → reconciliation 
   assert.equal(out.reconciliation!.computed_total_brl, 0);
   assert.equal(out.reconciliation!.gap_brl, -5000);
   assert.equal(out.reconciliation!.gap_pct, -1);
+  assert.equal(out.cash_flow_summary, null);
   assert.ok(out.warnings.some((w) => w.includes("No positions in database")));
 });
 
@@ -378,7 +407,7 @@ test("computePortfolioSummary: full portfolio with declared import", () => {
     source_path: "/tmp/x.pdf",
     imported_at: "2026-05-21 10:00:00",
   };
-  const out = computePortfolioSummary(positions, declared);
+  const out = computePortfolioSummary(positions, declared, null);
   assert.equal(out.total_market_value_brl, 22000);
   assert.equal(out.positions_count, 3);
   assert.equal(out.by_class.length, 3);
@@ -392,11 +421,13 @@ test("computePortfolioSummary: full portfolio with declared import", () => {
   assert.equal(out.pl_coverage.positions_with_pl_count, 2);
   assert.equal(out.pl_coverage.positions_total, 3);
   assert.equal(out.total_invested_brl, 6300);
+  assert.equal(out.cash_flow_summary, null);
 });
 
 test("computePortfolioSummary: positions without market_value are filtered with warning", () => {
   const out = computePortfolioSummary(
     [mkPosition("FII", 100000), mkPosition("ACAO", null)],
+    null,
     null,
   );
   assert.equal(out.positions_count, 1);
@@ -404,7 +435,7 @@ test("computePortfolioSummary: positions without market_value are filtered with 
 });
 
 test("computePortfolioSummary: no declared import emits warning when positions exist", () => {
-  const out = computePortfolioSummary([mkPosition("FII", 100000)], null);
+  const out = computePortfolioSummary([mkPosition("FII", 100000)], null, null);
   assert.ok(
     out.warnings.some((w) => w.includes("No XPerformance PDF imported yet")),
   );
@@ -424,7 +455,7 @@ test("computePortfolioSummary: stale declared emits stale warning", () => {
       last_imported_at: "2026-05-21 10:00:00",
     },
   ];
-  const out = computePortfolioSummary(positions, stale);
+  const out = computePortfolioSummary(positions, stale, null);
   assert.equal(out.reconciliation!.is_stale, true);
   assert.ok(out.warnings.some((w) => w.includes("Declared total dates from")));
 });
@@ -443,6 +474,30 @@ test("computePortfolioSummary: large gap (>1%) emits warning", () => {
       last_imported_at: "2026-05-21 10:00:00",
     },
   ];
-  const out = computePortfolioSummary(positions, declared);
+  const out = computePortfolioSummary(positions, declared, null);
   assert.ok(out.warnings.some((w) => w.includes("Reconciliation gap")));
+});
+
+test("computePortfolioSummary: cash_flow_summary attached when non-null, no warning", () => {
+  const cfs = mkCashFlowSummary({
+    total_records: 2,
+    ytd: { year: 2026, aporte_brl: 1500, resgate_brl: 0, net_brl: 1500 },
+  });
+  const out = computePortfolioSummary([mkPosition("FII", 100000)], null, cfs);
+  assert.equal(out.cash_flow_summary, cfs);
+  assert.ok(
+    !out.warnings.some((w) => w.includes("No cash flows imported yet")),
+    `expected no "No cash flows imported yet" warning, got: ${JSON.stringify(out.warnings)}`,
+  );
+});
+
+test("computePortfolioSummary: warning when cashFlowSummary is null AND positions exist", () => {
+  const out = computePortfolioSummary([mkPosition("FII", 100000)], null, null);
+  assert.equal(out.cash_flow_summary, null);
+  assert.ok(
+    out.warnings.some((w) =>
+      w.includes("No cash flows imported yet; cash_flow_summary unavailable"),
+    ),
+    `expected "No cash flows imported yet" warning, got: ${JSON.stringify(out.warnings)}`,
+  );
 });
