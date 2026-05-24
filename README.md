@@ -163,6 +163,7 @@ Claude (using portfolio-mcp.get_portfolio_summary):
 | `suggest_buys`                | Suggest BUYs per underweight class using profile objective × asset class matrix (FII/ACAO/ETF). Non-screenable classes (TESOURO/RF/FUNDO) reported in `skipped_classes`. Requires `outbound_enabled=true`. |   ✅   |
 | `calculate_twr`               | Time-weighted return (TWR) over XPerformance imports. Modified Dietz chained — GIPS-compliant for portfolios without daily NAV. Requires ≥ 2 imports. |   ✅   |
 | `calculate_mwr`               | Money-weighted return (MWR / IRR) via bisection over signed cash flows. Reports converged=false cleanly when no sign change. Requires ≥ 2 imports.   |   ✅   |
+| `get_crypto_quote`            | Spot crypto quotes in BRL via Mercado Bitcoin. Per-ticker partial failure, 15-min cache, outbound-gated. Quote-only (not yet a tracked asset_class). |   ✅   |
 
 ---
 
@@ -347,6 +348,7 @@ The `UNIQUE (asset_class, external_id)` constraint + `ON CONFLICT DO UPDATE` mak
 - [x] v0.7 — Suggest Buys: `suggest_buys` (composes profile + drift + screening into deterministic BUY suggestions per underweight class; non-screenable classes surface in `skipped_classes`)
 - [x] v0.8 — `cash_flow_summary` in `get_portfolio_summary`: YTD + rolling 12m aporte/resgate aggregates in the panorama output (no new tool, additive field).
 - [x] v0.9 — `calculate_twr` + `calculate_mwr`: time-weighted and money-weighted returns over XPerformance imports + cash_flows (Modified Dietz chained + bisection IRR; no schema change; tools MCP 12 → 14).
+- [x] v0.10 — `get_crypto_quote`: spot crypto quotes in BRL via Mercado Bitcoin (`CryptoQuoteSource` interface + `MercadoBitcoinSource` impl; per-ticker partial failure; 15-min cache; outbound-gated; quote-only; tools MCP 14 → 15).
 - [ ] Crypto adapter — new `MarketDataSource` for Binance / Mercado Bitcoin / Foxbit
 - [ ] Adapters for other Brazilian brokers (Rico, NuInvest, Inter, Avenue)
 - [ ] Open Finance Brasil investment module when the standard matures
@@ -354,6 +356,21 @@ The `UNIQUE (asset_class, external_id)` constraint + `ON CONFLICT DO UPDATE` mak
 ---
 
 ## Changelog
+
+### v0.10.0 — get_crypto_quote (2026-05-24)
+
+- New tool `get_crypto_quote`: spot crypto quotes in BRL via Mercado
+  Bitcoin's public ticker API. 1-20 symbols per call, per-ticker
+  partial failure, 15-minute cache, outbound-gated.
+- New `CryptoQuoteSource` interface + `MercadoBitcoinSource` impl —
+  slim interface (no equity fundamentals/universe), leaves the door
+  open for Binance/Foxbit later.
+- `MarketDataCache.put` gains an optional `source` param (default
+  brapi.dev — no behaviour change).
+- Crypto is NOT yet a tracked asset_class — quote-only foundation.
+  Scope B (positions, schema migration, summary/drift integration)
+  deferred to a future TODO.
+- Tools MCP: 14 → 15.
 
 ### v0.9.0 — calculate_twr + calculate_mwr (2026-05-24)
 
