@@ -193,7 +193,7 @@ type ToolName = keyof typeof TOOLS;
 const server = new Server(
   {
     name: "portfolio-mcp",
-    version: "0.10.0",
+    version: "0.11.0",
   },
   {
     capabilities: {

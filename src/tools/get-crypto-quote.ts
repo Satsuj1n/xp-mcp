@@ -1,7 +1,12 @@
 import { z } from "zod";
 import { AdvisorError } from "../advisor/errors.js";
 import { requireOutboundEnabled } from "../advisor/profile.js";
-import { MercadoBitcoinSource } from "../advisor/market-data/crypto-source.js";
+import {
+  MercadoBitcoinSource,
+  FoxbitSource,
+  BinanceSource,
+  MultiSourceCryptoQuoteSource,
+} from "../advisor/market-data/crypto-source.js";
 import { MarketDataCache } from "../advisor/market-data/cache.js";
 import type {
   CryptoQuote,
@@ -60,7 +65,16 @@ export async function getCryptoQuote(
   deps: GetCryptoQuoteDeps = {},
 ): Promise<GetCryptoQuoteResult> {
   await requireOutboundEnabled();
-  const source = deps.source ?? new MercadoBitcoinSource();
+  // Fallback chain (BRL-native first, Binance last — see v0.11 design §5.1):
+  // BTC stops at Mercado Bitcoin; an altcoin MB/Foxbit don't list reaches
+  // Binance, which converts USDT→BRL.
+  const source =
+    deps.source ??
+    new MultiSourceCryptoQuoteSource([
+      new MercadoBitcoinSource(),
+      new FoxbitSource(),
+      new BinanceSource(),
+    ]);
   const cache = deps.cache ?? new MarketDataCache(getDb());
 
   const ttl = input.cache_ttl_minutes ?? DEFAULT_TTL_MIN;
@@ -75,7 +89,9 @@ export async function getCryptoQuote(
         row.quote = cached.data;
       } else {
         const fresh = await source.getCryptoQuote(ticker);
-        cache.put(ticker, "crypto_quote", fresh, source.name);
+        // With the multi-source, source.name is "multi"; record the source that
+        // actually answered (fresh.source) so the cache row keeps the true origin.
+        cache.put(ticker, "crypto_quote", fresh, fresh.source);
         row.quote = fresh;
       }
     } catch (e) {
