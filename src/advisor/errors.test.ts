@@ -2,8 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   AdvisorError,
-  BrapiRateLimitError,
-  BrapiTimeoutError,
+  UpstreamRateLimitError,
+  UpstreamTimeoutError,
   DisclaimerRequiredError,
   OutboundDisabledError,
   ProfileInvalidError,
@@ -36,16 +36,16 @@ test("DisclaimerRequiredError has code DISCLAIMER_REQUIRED", () => {
   assert.equal(err.code, "DISCLAIMER_REQUIRED");
 });
 
-test("BrapiRateLimitError carries retryAfterSeconds and is recoverable", () => {
-  const err = new BrapiRateLimitError("rate limited", 30);
-  assert.equal(err.code, "BRAPI_RATE_LIMIT");
+test("UpstreamRateLimitError carries retryAfterSeconds and is recoverable", () => {
+  const err = new UpstreamRateLimitError("rate limited", 30);
+  assert.equal(err.code, "UPSTREAM_RATE_LIMIT");
   assert.equal(err.recoverable, true);
   assert.equal(err.retryAfterSeconds, 30);
 });
 
-test("BrapiTimeoutError is recoverable", () => {
-  const err = new BrapiTimeoutError("timeout");
-  assert.equal(err.code, "BRAPI_TIMEOUT");
+test("UpstreamTimeoutError is recoverable", () => {
+  const err = new UpstreamTimeoutError("timeout");
+  assert.equal(err.code, "UPSTREAM_TIMEOUT");
   assert.equal(err.recoverable, true);
 });
 
