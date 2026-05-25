@@ -153,6 +153,14 @@ test("classifyAsset: ' FUNDO ' word boundary → FUNDO", () => {
   );
 });
 
+test("classifyAsset: name STARTING with 'Fundo' (no sigla/keyword) → FUNDO", () => {
+  // \b anchors the word boundary at the string start; no leading space required
+  assert.equal(
+    classifyAsset({ ticker_or_name: "Fundo de Crédito Privado XPTO" }),
+    "FUNDO",
+  );
+});
+
 test("classifyAsset: a ####11 ticker is FII, not FUNDO, even with fund-ish text nearby", () => {
   // looksLikeFII short-circuits the FUNDO branch
   assert.equal(classifyAsset({ ticker_or_name: "MXRF11" }), "FII");

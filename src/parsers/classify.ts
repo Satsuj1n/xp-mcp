@@ -129,7 +129,7 @@ export function classifyAsset(input: ClassifyInput): AssetClass | null {
     upper.startsWith("FIC ") ||
     upper.includes("REFERENCIADO") ||
     upper.includes("MULTIMERCADO") ||
-    /\b FUNDO\b/i.test(name);
+    /\bFUNDO\b/i.test(name);
   const looksLikeFII = upper.endsWith("11") && /^[A-Z]{4}11$/.test(upper);
   if (looksLikeFund && !looksLikeFII && !upper.includes("IMOBIL")) {
     return "FUNDO";
