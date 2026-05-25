@@ -164,6 +164,7 @@ Claude (using portfolio-mcp.get_portfolio_summary):
 | `calculate_twr`               | Time-weighted return (TWR) over XPerformance imports. Modified Dietz chained — GIPS-compliant for portfolios without daily NAV. Requires ≥ 2 imports. |   ✅   |
 | `calculate_mwr`               | Money-weighted return (MWR / IRR) via bisection over signed cash flows. Reports converged=false cleanly when no sign change. Requires ≥ 2 imports.   |   ✅   |
 | `get_crypto_quote`            | Spot crypto quotes in BRL via Mercado Bitcoin. Per-ticker partial failure, 15-min cache, outbound-gated. Quote-only (not yet a tracked asset_class). |   ✅   |
+| `set_crypto_position`         | Manually track a crypto holding (`CRIPTO` asset_class). Fetches a live quote, stores a snapshot market value (quantity × price). `quantity: 0` removes it. No cost basis / P&L. Outbound-gated. |   ✅   |
 
 ---
 
@@ -215,7 +216,7 @@ mkdir -p ~/.xp-mcp
 cp examples/allocation.example.json ~/.xp-mcp/allocation.json
 ```
 
-The six valid keys are `TESOURO`, `RENDA_FIXA_PRIVADA`, `FII`, `ETF`, `ACAO`, `FUNDO`. Values must sum to `1.00` (±0.001). `tolerance_pp` is optional — when set, drifts within the band are reported as `"ok"` with no action.
+The seven valid keys are `TESOURO`, `RENDA_FIXA_PRIVADA`, `FII`, `ETF`, `ACAO`, `FUNDO`, `CRIPTO`. Values must sum to `1.00` (±0.001). `tolerance_pp` is optional — when set, drifts within the band are reported as `"ok"` with no action.
 
 ---
 
@@ -350,12 +351,35 @@ The `UNIQUE (asset_class, external_id)` constraint + `ON CONFLICT DO UPDATE` mak
 - [x] v0.9 — `calculate_twr` + `calculate_mwr`: time-weighted and money-weighted returns over XPerformance imports + cash_flows (Modified Dietz chained + bisection IRR; no schema change; tools MCP 12 → 14).
 - [x] v0.10 — `get_crypto_quote`: spot crypto quotes in BRL via Mercado Bitcoin (`CryptoQuoteSource` interface + `MercadoBitcoinSource` impl; per-ticker partial failure; 15-min cache; outbound-gated; quote-only; tools MCP 14 → 15).
 - [x] v0.11 — multi-source crypto: `get_crypto_quote` now falls back across Mercado Bitcoin → Foxbit → Binance (`MultiSourceCryptoQuoteSource` chain), with Binance USDT quotes converted to BRL via the MB USDT/BRL rate; widens altcoin coverage (internal only — still 15 tools).
+- [x] v0.12 — crypto as a tracked asset_class: `set_crypto_position` (manual entry, `CRIPTO` added to `ASSET_CLASSES`, snapshot valuation via the v0.11 multi-source chain, no cost basis; flows into summary/drift/suggest_buys with no service change; tools MCP 15 → 16).
 - [ ] Adapters for other Brazilian brokers (Rico, NuInvest, Inter, Avenue)
 - [ ] Open Finance Brasil investment module when the standard matures
 
 ---
 
 ## Changelog
+
+### v0.12.0 — crypto as a tracked asset_class (2026-05-25)
+
+- New tool `set_crypto_position`: manual entry that makes crypto a
+  first-class tracked `asset_class` (`CRIPTO`). Fetches a live quote via
+  the v0.11 multi-source chain (Mercado Bitcoin → Foxbit → Binance) and
+  upserts a `positions` row with a **snapshot** market value
+  (quantity × current price). Outbound-gated.
+- `quantity: 0` removes the holding (idempotent single tool). Re-running
+  the tool refreshes the snapshot in place.
+- Snapshot valuation, **no cost basis / P&L**: manual entry records
+  quantity + current market value only (`avg_price_cents`/
+  `invested_cents` stay null), so crypto shows market value but no
+  profit/loss — mirroring how XP positions are snapshots from the last
+  import.
+- Crypto flows into `get_portfolio_summary` and
+  `calculate_allocation_drift` automatically — both already aggregate by
+  `asset_class`, so no service change was needed. A crypto holding with
+  no target key shows as over-target vs 0% in drift; in `suggest_buys`
+  it lands in `skipped_classes` (CRIPTO is non-screenable).
+- Additive: `"CRIPTO"` added to `ASSET_CLASSES`, no DDL change, no
+  `SCHEMA_VERSION` bump, no new dependency. Tools MCP: 15 → 16.
 
 ### v0.11.0 — multi-source crypto (2026-05-25)
 

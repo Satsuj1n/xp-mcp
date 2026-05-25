@@ -85,6 +85,74 @@ export function upsertPositions(
   return { inserted, updated };
 }
 
+export interface CryptoPositionInput {
+  ticker: string;
+  name: string;
+  quantity: number;
+  current_price_cents: number;
+  market_value_cents: number;
+}
+
+/**
+ * Upsert a manually-entered crypto holding keyed by ('CRIPTO', ticker).
+ *
+ * Manual entry is NOT an import: `last_import_id` is null. There is no cost
+ * basis (avg_price/invested) and no fixed-income metadata, so those columns are
+ * nulled. Value is a snapshot (quantity × current price) computed at call time
+ * by the tool — see the v0.12 design §4. Idempotent: re-upsert refreshes the
+ * snapshot in place via the same ON CONFLICT(asset_class, external_id) path
+ * used by `upsertPositions`.
+ */
+export function upsertCryptoPosition(
+  db: Database,
+  input: CryptoPositionInput,
+): void {
+  db.prepare(
+    `
+    INSERT INTO positions (
+      asset_class, external_id, name,
+      quantity, avg_price_cents, current_price_cents,
+      invested_cents, market_value_cents,
+      issuer, indexer, rate, maturity_date, has_fgc,
+      last_imported_at, last_import_id
+    ) VALUES (
+      'CRIPTO', @external_id, @name,
+      @quantity, NULL, @current_price_cents,
+      NULL, @market_value_cents,
+      NULL, NULL, NULL, NULL, NULL,
+      datetime('now'), NULL
+    )
+    ON CONFLICT (asset_class, external_id) DO UPDATE SET
+      name = excluded.name,
+      quantity = excluded.quantity,
+      avg_price_cents = NULL,
+      current_price_cents = excluded.current_price_cents,
+      invested_cents = NULL,
+      market_value_cents = excluded.market_value_cents,
+      issuer = NULL,
+      indexer = NULL,
+      rate = NULL,
+      maturity_date = NULL,
+      has_fgc = NULL,
+      last_imported_at = datetime('now'),
+      last_import_id = NULL
+  `,
+  ).run({
+    external_id: input.ticker,
+    name: input.name,
+    quantity: input.quantity,
+    current_price_cents: input.current_price_cents,
+    market_value_cents: input.market_value_cents,
+  });
+}
+
+/** Delete the ('CRIPTO', ticker) row. No-op if the row is absent. */
+export function deleteCryptoPosition(db: Database, ticker: string): void {
+  db.prepare(
+    "DELETE FROM positions WHERE asset_class = 'CRIPTO' AND external_id = ?",
+  ).run(ticker);
+}
+
 export interface PositionRow {
   id: number;
   asset_class: AssetClass;

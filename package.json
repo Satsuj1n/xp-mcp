@@ -1,6 +1,6 @@
 {
   "name": "portfolio-mcp",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "description": "Local-first MCP server for personal investment portfolio analysis. Currently supports XP Investimentos; adapter-ready for Rico, NuInvest, Inter, Avenue, and crypto exchanges.",
   "license": "MIT",
   "author": "Felipe Lima",

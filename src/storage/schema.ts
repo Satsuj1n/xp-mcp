@@ -10,6 +10,7 @@ export const ASSET_CLASSES = [
   "ETF",
   "ACAO",
   "FUNDO",
+  "CRIPTO",
 ] as const;
 
 export type AssetClass = (typeof ASSET_CLASSES)[number];

@@ -296,3 +296,21 @@ test("composeSuggestions: rationale forwarded verbatim from screen.why", () => {
   const r = composeSuggestions(d, screens, new Set(), 3);
   assert.equal(r.suggestions[0]?.rationale, "DY 11.2% (median 9.4%)");
 });
+
+// v0.12 — CRIPTO is not a ScreenableClass (FII/ACAO/ETF). An underweight CRIPTO
+// row must not crash; it lands in skipped_classes via the existing
+// non-screenable path, exactly like TESOURO/RENDA_FIXA/FUNDO.
+test("composeSuggestions: CRIPTO underweight does not throw, goes to skipped_classes", () => {
+  const d = drift([driftRow("CRIPTO", "underweight", 800)]);
+  let r: SuggestBuysResult;
+  assert.doesNotThrow(() => {
+    r = composeSuggestions(d, new Map(), new Set(), 3);
+  });
+  r = composeSuggestions(d, new Map(), new Set(), 3);
+  assert.equal(r.suggestions.length, 0);
+  assert.equal(r.skipped_classes.length, 1);
+  assert.equal(r.skipped_classes[0]?.asset_class, "CRIPTO");
+  assert.equal(r.skipped_classes[0]?.underweight_brl, 800);
+  assert.match(r.skipped_classes[0]?.reason ?? "", /CRIPTO/);
+  assert.equal(r.total_skipped_brl, 800);
+});

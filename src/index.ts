@@ -45,6 +45,10 @@ import {
   getCryptoQuote,
   getCryptoQuoteSchema,
 } from "./tools/get-crypto-quote.js";
+import {
+  setCryptoPosition,
+  setCryptoPositionSchema,
+} from "./tools/set-crypto-position.js";
 
 /**
  * Tool registry. Adding a new tool = adding one entry here.
@@ -186,6 +190,17 @@ const TOOLS = {
     schema: getCryptoQuoteSchema,
     handler: getCryptoQuote,
   },
+  set_crypto_position: {
+    description:
+      "Manually track a crypto holding (e.g. BTC, ETH). Fetches the current " +
+      "BRL quote (multi-source: Mercado Bitcoin → Foxbit → Binance) and stores " +
+      "a snapshot market value (quantity × current price) as a CRIPTO position, " +
+      "which then flows into get_portfolio_summary and calculate_allocation_drift. " +
+      "quantity=0 removes the holding (idempotent). Re-run to refresh the value. " +
+      "Outbound-gated. Snapshot only — no cost basis / P&L is recorded.",
+    schema: setCryptoPositionSchema,
+    handler: setCryptoPosition,
+  },
 } as const;
 
 type ToolName = keyof typeof TOOLS;
@@ -193,7 +208,7 @@ type ToolName = keyof typeof TOOLS;
 const server = new Server(
   {
     name: "portfolio-mcp",
-    version: "0.11.0",
+    version: "0.12.0",
   },
   {
     capabilities: {
