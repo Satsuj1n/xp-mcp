@@ -71,13 +71,25 @@ const PT_BR_MONTH: Record<string, string> = {
   DEZ: "12",
 };
 
+/**
+ * Reads the PDF, extracts text via `pdf-parse`, delegates to
+ * `parseXPerformanceText`. The async boundary lives only at the I/O step;
+ * downstream parsing is pure and unit-testable without a file.
+ */
 export async function parseXPerformancePdf(
   filePath: string,
 ): Promise<XPerformanceParseResult> {
   const buf = readFileSync(filePath);
   const data = await pdf(buf);
-  const text = data.text;
+  return parseXPerformanceText(data.text);
+}
 
+/**
+ * Parses the full text content of an XPerformance PDF. Pure function: given the
+ * same text, always returns the same result. Covers reference date, patrimônio
+ * total, the POSIÇÃO DETALHADA line walk, per-asset parsing, and warnings.
+ */
+export function parseXPerformanceText(text: string): XPerformanceParseResult {
   // ── Reference date (last "Data de Referência: DD/MM/YYYY" on the cover) ──
   const refDateMatch = text.match(
     /Data de Refer[êe]ncia[\s\S]*?(\d{2})\/(\d{2})\/(\d{4})/,
@@ -159,6 +171,23 @@ export async function parseXPerformancePdf(
       unrecognized++;
       continue;
     }
+
+    // Observability: when there is no patrimônio anchor, the qty/pct split is
+    // fundamentally ambiguous (e.g. "0,7746,47%" could be 0,77|46,47 or
+    // 0,7|746,47). We never invent a split — but if BOTH came back null we
+    // surface it so the gap is visible rather than silent. A row that yields a
+    // pct but no qty (e.g. a CDB) is legitimate and must NOT warn here.
+    const isNoAnchor = !(patrimonio_total_cents && patrimonio_total_cents > 0);
+    if (
+      isNoAnchor &&
+      parsed.quantity == null &&
+      parsed.pct_allocation == null
+    ) {
+      warnings.push(
+        `quantity/allocation not extracted for "${parsed.name}" — no patrimônio anchor and ambiguous qty/pct split`,
+      );
+    }
+
     positions.push(parsed);
   }
 
@@ -334,4 +363,5 @@ export const __internal = {
   XP_STRATEGIES,
   pickClosestPctToken,
   parseAssetLine,
+  parseXPerformanceText,
 };

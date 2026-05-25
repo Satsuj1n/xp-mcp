@@ -2,8 +2,13 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { __internal } from "./pdf-xperformance.js";
 
-const { parseAssetLine, pickClosestPctToken, XP_STRATEGIES, PT_BR_MONTH } =
-  __internal;
+const {
+  parseAssetLine,
+  pickClosestPctToken,
+  parseXPerformanceText,
+  XP_STRATEGIES,
+  PT_BR_MONTH,
+} = __internal;
 
 // Anchors chosen so the expected %Aloc (market_value / patrimonio * 100)
 // lands on the split documented in the parser's own docstring examples.
@@ -118,6 +123,82 @@ test("parseAssetLine: Tesouro line extracts class + metadata", () => {
   // comma inside "0,77", so it fails to match → both qty and pct stay null.
   assert.equal(parsed.quantity, null);
   assert.equal(parsed.pct_allocation, null);
+});
+
+// ── parseAssetLine: anchored fractional Tesouro (the REAL flow) ───────────
+
+test("parseAssetLine: fractional Tesouro WITH anchor → qty 0.77, pct 46.47", () => {
+  // This documents that the production flow (which always has a patrimônio
+  // anchor) extracts the fractional quantity correctly. The null-qty case only
+  // happens in the rare no-anchor fallback, where the split is ambiguous.
+  const anchor = Math.round((1454884 * 100) / 46.47);
+  const parsed = parseAssetLine(
+    "Tesouro Selic 2031R$ 14.548,840,7746,47%0,38%101,31%1,65%94,82%--",
+    "Pós Fixado",
+    anchor,
+  );
+  assert.ok(parsed);
+  assert.equal(parsed.asset_class, "TESOURO");
+  assert.equal(parsed.market_value_cents, 1454884);
+  assert.equal(parsed.quantity, 0.77);
+  assert.equal(parsed.pct_allocation, 46.47);
+});
+
+// ── parseXPerformanceText: end-to-end text parsing ────────────────────────
+
+// Patrimônio chosen so the Tesouro row's expected %Aloc lands on 46,47%:
+// round(1.454.884 * 100 / 46.47) = 3.130.803 cents → "R$ 31.308,03".
+const TESOURO_BLOCK = [
+  "POSIÇÃO DETALHADA DOS ATIVOS",
+  "Pós Fixado",
+  "Tesouro Selic 2031R$ 14.548,840,7746,47%0,38%101,31%1,65%94,82%--",
+  "MOVIMENTAÇÕES",
+].join("\n");
+
+test("parseXPerformanceText: WITH patrimônio anchor → correct qty/pct, no 'not extracted' warning", () => {
+  const text = `Data de Referência: 30/04/2026
+PATRIMÔNIO TOTAL BRUTO: R$ 31.308,03
+${TESOURO_BLOCK}`;
+
+  const result = parseXPerformanceText(text);
+
+  assert.equal(result.patrimonio_total_cents, 3130803);
+  assert.equal(result.reference_date, "2026-04-30");
+  assert.equal(result.positions.length, 1);
+
+  const tesouro = result.positions[0];
+  assert.ok(tesouro);
+  assert.equal(tesouro.asset_class, "TESOURO");
+  assert.equal(tesouro.quantity, 0.77);
+  assert.equal(tesouro.pct_allocation, 46.47);
+
+  const notExtracted = result.warnings.filter((w) =>
+    w.includes("not extracted"),
+  );
+  assert.deepEqual(notExtracted, []);
+});
+
+test("parseXPerformanceText: WITHOUT patrimônio anchor → null qty/pct AND 'not extracted' warning", () => {
+  // Same block, but no PATRIMÔNIO line → no anchor → ambiguous split → null/null.
+  const text = `Data de Referência: 30/04/2026
+${TESOURO_BLOCK}`;
+
+  const result = parseXPerformanceText(text);
+
+  assert.equal(result.patrimonio_total_cents, null);
+  assert.equal(result.positions.length, 1);
+
+  const tesouro = result.positions[0];
+  assert.ok(tesouro);
+  assert.equal(tesouro.asset_class, "TESOURO");
+  assert.equal(tesouro.quantity, null);
+  assert.equal(tesouro.pct_allocation, null);
+
+  const notExtracted = result.warnings.filter((w) =>
+    w.includes("not extracted"),
+  );
+  assert.equal(notExtracted.length, 1);
+  assert.ok(notExtracted[0]?.includes("Tesouro Selic 2031"));
 });
 
 // ── parseAssetLine: rejection paths ───────────────────────────────────────
