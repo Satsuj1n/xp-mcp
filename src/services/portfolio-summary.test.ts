@@ -501,3 +501,25 @@ test("computePortfolioSummary: warning when cashFlowSummary is null AND position
     `expected "No cash flows imported yet" warning, got: ${JSON.stringify(out.warnings)}`,
   );
 });
+
+// v0.12 — crypto as a tracked asset_class. A CRIPTO position carries no cost
+// basis (invested_cents null), so it aggregates by class on market value only.
+test("computePortfolioSummary: CRIPTO position aggregates as its own class with correct mv/pct", () => {
+  const positions: PositionRow[] = [
+    mkPosition("FII", 300000, null, "MXRF11"), // R$ 3,000
+    // crypto snapshot: qty * price → market_value only, no invested/avg
+    mkPosition("CRIPTO", 100000, null, "BTC"), // R$ 1,000
+  ];
+  const out = computePortfolioSummary(positions, null, null);
+
+  assert.equal(out.total_market_value_brl, 4000);
+  const cripto = out.by_class.find((r) => r.asset_class === "CRIPTO");
+  assert.ok(cripto, "expected a CRIPTO line in by_class");
+  assert.equal(cripto!.count, 1);
+  assert.equal(cripto!.market_value_brl, 1000);
+  assert.ok(Math.abs(cripto!.pct_of_total - 1000 / 4000) < 1e-9);
+  // No cost basis → P&L fields stay null for the crypto class.
+  assert.equal(cripto!.invested_brl, null);
+  assert.equal(cripto!.unrealized_pl_brl, null);
+  assert.equal(cripto!.unrealized_pl_pct, null);
+});

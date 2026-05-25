@@ -55,4 +55,5 @@ jobs:
           echo "$OUTPUT" | grep -q '"name":"calculate_twr"'             || { echo "Smoke failed: calculate_twr not registered"; exit 1; }
           echo "$OUTPUT" | grep -q '"name":"calculate_mwr"'             || { echo "Smoke failed: calculate_mwr not registered"; exit 1; }
           echo "$OUTPUT" | grep -q '"name":"get_crypto_quote"' || { echo "Smoke failed: get_crypto_quote not registered"; exit 1; }
-          echo "All 15 tools registered correctly"
+          echo "$OUTPUT" | grep -q '"name":"set_crypto_position"' || { echo "Smoke failed: set_crypto_position not registered"; exit 1; }
+          echo "All 16 tools registered correctly"

@@ -165,3 +165,21 @@ test("reference_date is the max last_imported_at across positions", () => {
   const r = computeDrift(positions, mkTarget({ TESOURO: 0.67, FII: 0.33 }));
   assert.equal(r.reference_date, "2026-05-15 00:00:00");
 });
+
+// v0.12 — a CRIPTO holding with no crypto key in the target. The allClasses
+// union (positions ∪ target) already surfaces it as over-target vs 0%, so the
+// user sees an unbudgeted class to either set a target for or trim.
+test("CRIPTO present but absent from target → overweight vs 0% (SELL full amount)", () => {
+  const positions = [
+    mkPosition("TESOURO", 90_000),
+    mkPosition("CRIPTO", 10_000),
+  ];
+  const r = computeDrift(positions, mkTarget({ TESOURO: 1.0 }));
+  const cripto = r.drift.find((d) => d.asset_class === "CRIPTO");
+  assert.ok(cripto, "expected a CRIPTO drift row");
+  assert.equal(cripto.target_pct, 0);
+  assert.equal(cripto.target_brl, 0);
+  assert.ok(cripto.current_pct > 0);
+  assert.equal(cripto.status, "overweight");
+  assert.deepEqual(cripto.action, { side: "SELL", amount_brl: 100 });
+});
