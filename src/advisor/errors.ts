@@ -31,8 +31,8 @@ export class DisclaimerRequiredError extends AdvisorError {
   readonly code = "DISCLAIMER_REQUIRED";
 }
 
-export class BrapiRateLimitError extends AdvisorError {
-  readonly code = "BRAPI_RATE_LIMIT";
+export class UpstreamRateLimitError extends AdvisorError {
+  readonly code = "UPSTREAM_RATE_LIMIT";
   override readonly recoverable = true;
   constructor(
     message: string,
@@ -42,8 +42,8 @@ export class BrapiRateLimitError extends AdvisorError {
   }
 }
 
-export class BrapiTimeoutError extends AdvisorError {
-  readonly code = "BRAPI_TIMEOUT";
+export class UpstreamTimeoutError extends AdvisorError {
+  readonly code = "UPSTREAM_TIMEOUT";
   override readonly recoverable = true;
 }
 

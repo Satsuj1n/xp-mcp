@@ -1,7 +1,7 @@
 import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { fetchWithRetry } from "./fetch.js";
-import { BrapiRateLimitError, BrapiTimeoutError } from "../errors.js";
+import { UpstreamRateLimitError, UpstreamTimeoutError } from "../errors.js";
 
 type FetchFn = typeof globalThis.fetch;
 let originalFetch: FetchFn;
@@ -46,15 +46,15 @@ test("retries on 429 with exponential backoff, then succeeds", async () => {
   assert.ok(elapsed >= 10, `expected backoff to wait, elapsed=${elapsed}ms`);
 });
 
-test("throws BrapiRateLimitError when 429 persists beyond max_retries", async () => {
+test("throws UpstreamRateLimitError when 429 persists beyond max_retries", async () => {
   mockFetch([async () => new Response("rate limit", { status: 429 })]);
   await assert.rejects(
     fetchWithRetry("https://example/x", { max_retries: 1, backoff_base_ms: 5 }),
-    (e: unknown) => e instanceof BrapiRateLimitError,
+    (e: unknown) => e instanceof UpstreamRateLimitError,
   );
 });
 
-test("throws BrapiTimeoutError on abort", async () => {
+test("throws UpstreamTimeoutError on abort", async () => {
   mockFetch([
     async () => {
       await new Promise((r) => setTimeout(r, 200));
@@ -63,7 +63,7 @@ test("throws BrapiTimeoutError on abort", async () => {
   ]);
   await assert.rejects(
     fetchWithRetry("https://example/x", { timeout_ms: 20, max_retries: 0 }),
-    (e: unknown) => e instanceof BrapiTimeoutError,
+    (e: unknown) => e instanceof UpstreamTimeoutError,
   );
 });
 

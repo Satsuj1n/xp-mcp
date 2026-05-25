@@ -1,4 +1,4 @@
-import { BrapiRateLimitError, BrapiTimeoutError } from "../errors.js";
+import { UpstreamRateLimitError, UpstreamTimeoutError } from "../errors.js";
 
 export interface FetchWithRetryOpts {
   timeout_ms?: number;
@@ -65,7 +65,7 @@ export async function fetchWithRetry(
 
     if (res === TIMED_OUT) {
       if (attempt === maxRetries) {
-        throw new BrapiTimeoutError(`Timeout after ${timeout}ms for ${url}`);
+        throw new UpstreamTimeoutError(`Timeout after ${timeout}ms for ${url}`);
       }
       await sleep(base * (attempt + 1));
       continue;
@@ -89,7 +89,7 @@ export async function fetchWithRetry(
   const seconds = retryAfter
     ? Number(retryAfter)
     : (base * Math.pow(2, maxRetries)) / 1000;
-  throw new BrapiRateLimitError(
+  throw new UpstreamRateLimitError(
     `Rate limited (429) for ${url}`,
     Number.isFinite(seconds) ? seconds : 60,
   );
