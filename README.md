@@ -349,13 +349,32 @@ The `UNIQUE (asset_class, external_id)` constraint + `ON CONFLICT DO UPDATE` mak
 - [x] v0.8 — `cash_flow_summary` in `get_portfolio_summary`: YTD + rolling 12m aporte/resgate aggregates in the panorama output (no new tool, additive field).
 - [x] v0.9 — `calculate_twr` + `calculate_mwr`: time-weighted and money-weighted returns over XPerformance imports + cash_flows (Modified Dietz chained + bisection IRR; no schema change; tools MCP 12 → 14).
 - [x] v0.10 — `get_crypto_quote`: spot crypto quotes in BRL via Mercado Bitcoin (`CryptoQuoteSource` interface + `MercadoBitcoinSource` impl; per-ticker partial failure; 15-min cache; outbound-gated; quote-only; tools MCP 14 → 15).
-- [ ] Crypto adapter — new `MarketDataSource` for Binance / Mercado Bitcoin / Foxbit
+- [x] v0.11 — multi-source crypto: `get_crypto_quote` now falls back across Mercado Bitcoin → Foxbit → Binance (`MultiSourceCryptoQuoteSource` chain), with Binance USDT quotes converted to BRL via the MB USDT/BRL rate; widens altcoin coverage (internal only — still 15 tools).
 - [ ] Adapters for other Brazilian brokers (Rico, NuInvest, Inter, Avenue)
 - [ ] Open Finance Brasil investment module when the standard matures
 
 ---
 
 ## Changelog
+
+### v0.11.0 — multi-source crypto (2026-05-25)
+
+- `get_crypto_quote` now defaults to a multi-source fallback chain
+  (`MultiSourceCryptoQuoteSource`): Mercado Bitcoin → Foxbit → Binance.
+  Tries each in order, falling through on `TickerNotFoundError` or a
+  recoverable error, returning the first successful quote.
+- New `FoxbitSource` (BRL-native) widens Brazilian coverage; new
+  `BinanceSource` (USDT-native) covers the altcoin long tail, converting
+  every monetary field to BRL via a USDT/BRL rate from the
+  already-integrated Mercado Bitcoin `/USDT/ticker/` endpoint
+  (`MbUsdBrlRate`) — no new external FX dependency.
+- `CryptoQuote` gains additive optional fields `price_usd` and
+  `fx_rate_brl_per_usd` for conversion transparency (BRL-native sources
+  leave them undefined).
+- The cache row records the source that actually answered (e.g.
+  `binance`), not the strategy name `multi`; top-level result `source`
+  is `"multi"` while each `quote.source` keeps the real origin.
+- Internal only — `get_crypto_quote` is still one tool. Tools MCP: 15.
 
 ### v0.10.0 — get_crypto_quote (2026-05-24)
 

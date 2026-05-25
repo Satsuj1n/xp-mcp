@@ -12,9 +12,10 @@ import {
 } from "../advisor/errors.js";
 import { saveProfile, advisorProfileSchema } from "../advisor/profile.js";
 import { getCryptoQuote, DISCLAIMER } from "./get-crypto-quote.js";
-import type {
-  CryptoQuote,
-  CryptoQuoteSource,
+import {
+  MultiSourceCryptoQuoteSource,
+  type CryptoQuote,
+  type CryptoQuoteSource,
 } from "../advisor/market-data/crypto-source.js";
 
 class StubCryptoSource implements CryptoQuoteSource {
@@ -41,6 +42,35 @@ class StubCryptoSource implements CryptoQuoteSource {
     if (v instanceof Error) throw v;
     return v;
   }
+}
+
+/** A named source whose behaviour is fully configurable, for building chains. */
+class FakeNamedSource implements CryptoQuoteSource {
+  public calls = 0;
+  constructor(
+    public readonly name: string,
+    private readonly behaviour: (ticker: string) => CryptoQuote | Error,
+  ) {}
+  async getCryptoQuote(ticker: string): Promise<CryptoQuote> {
+    this.calls++;
+    const v = this.behaviour(ticker);
+    if (v instanceof Error) throw v;
+    return v;
+  }
+}
+
+function quoteFrom(source: string, ticker: string): CryptoQuote {
+  return {
+    ticker,
+    price_brl: 350000,
+    high_brl: 352000,
+    low_brl: 348000,
+    buy_brl: 349900,
+    sell_brl: 350100,
+    volume: 123.45,
+    updated_at: "2026-05-24T00:00:00.000Z",
+    source,
+  };
 }
 
 let tempDir: string;
@@ -185,4 +215,75 @@ test("cache_ttl_minutes=0 forces a fresh fetch even with a cached row", async ()
   );
   assert.equal(source.calls, 1, "ttl=0 must bypass cache and hit the source");
   assert.equal(result.results[0].quote?.price_brl, 350000);
+});
+
+test("multi-source via deps: result.source is 'multi' and quote.source reflects the real underlying source", async () => {
+  await enableOutbound();
+  const mb = new FakeNamedSource("mercadobitcoin", (t) =>
+    quoteFrom("mercadobitcoin", t),
+  );
+  const foxbit = new FakeNamedSource("foxbit", (t) => quoteFrom("foxbit", t));
+  const source = new MultiSourceCryptoQuoteSource([mb, foxbit]);
+  const cache = new MarketDataCache(db);
+
+  const result = await getCryptoQuote({ tickers: ["BTC"] }, { source, cache });
+
+  assert.equal(result.source, "multi", "top-level source is the strategy name");
+  assert.equal(
+    result.results[0].quote?.source,
+    "mercadobitcoin",
+    "per-quote source must be the real source that answered, not 'multi'",
+  );
+  assert.equal(foxbit.calls, 0, "first source wins; later sources not called");
+});
+
+test("multi-source fallthrough: first source TickerNotFoundError, second source answers", async () => {
+  await enableOutbound();
+  const mb = new FakeNamedSource(
+    "mercadobitcoin",
+    () => new TickerNotFoundError("BTC"),
+  );
+  const binance = new FakeNamedSource("binance", (t) =>
+    quoteFrom("binance", t),
+  );
+  const source = new MultiSourceCryptoQuoteSource([mb, binance]);
+  const cache = new MarketDataCache(db);
+
+  const result = await getCryptoQuote({ tickers: ["BTC"] }, { source, cache });
+
+  assert.equal(result.ok, true);
+  assert.equal(mb.calls, 1, "first source is tried");
+  assert.equal(binance.calls, 1, "chain falls through to the second source");
+  assert.equal(result.results[0].error, null);
+  assert.equal(
+    result.results[0].quote?.source,
+    "binance",
+    "the quote must come from the source that actually answered",
+  );
+});
+
+test("multi-source caches the real source row, not the strategy name 'multi'", async () => {
+  await enableOutbound();
+  const mb = new FakeNamedSource(
+    "mercadobitcoin",
+    () => new TickerNotFoundError("DOGE"),
+  );
+  const binance = new FakeNamedSource("binance", (t) =>
+    quoteFrom("binance", t),
+  );
+  const source = new MultiSourceCryptoQuoteSource([mb, binance]);
+  const cache = new MarketDataCache(db);
+
+  await getCryptoQuote({ tickers: ["DOGE"] }, { source, cache });
+
+  const sources = db
+    .prepare(
+      "SELECT source FROM market_data_cache WHERE ticker = ? AND data_type = ?",
+    )
+    .all("DOGE", "crypto_quote") as { source: string }[];
+  assert.deepEqual(
+    sources.map((r) => r.source),
+    ["binance"],
+    "cache row must record the answering source (binance), never 'multi'",
+  );
 });
