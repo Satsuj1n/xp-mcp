@@ -1,0 +1,5 @@
+Código;Nome;Classe;Quantidade;Preço Médio;Preço Atual;Valor Aplicado;Valor de Mercado;Emissor;Indexador;Taxa;Vencimento
+BBAS3;Banco do Brasil ON;Ação;100;R$ 25,00;R$ 27,63;R$ 2.500,00;R$ 2.763,00;;;;
+MXRF11;Maxi Renda FII;Fundo Imobiliário;150;R$ 9,80;R$ 9,96;R$ 1.470,00;R$ 1.494,00;;;;
+;Tesouro Selic 2031;Tesouro;0,77;R$ 14.000,00;R$ 14.548,84;R$ 10.780,00;R$ 11.202,60;Tesouro Nacional;SELIC;;31/12/2031
+;CDB BANCO XP S.A. - NOV/2027 - 100,00% CDI;CDB;;;;R$ 1.000,00;R$ 1.069,17;BANCO XP S.A.;CDI;100,00% CDI;15/11/2027
