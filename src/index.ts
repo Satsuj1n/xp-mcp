@@ -49,6 +49,11 @@ import {
   setCryptoPosition,
   setCryptoPositionSchema,
 } from "./tools/set-crypto-position.js";
+import {
+  getTransactions,
+  getTransactionsSchema,
+} from "./tools/get-transactions.js";
+import { getDividends, getDividendsSchema } from "./tools/get-dividends.js";
 
 /**
  * Tool registry. Adding a new tool = adding one entry here.
@@ -200,6 +205,22 @@ const TOOLS = {
       "Outbound-gated. Snapshot only — no cost basis / P&L is recorded.",
     schema: setCryptoPositionSchema,
     handler: setCryptoPosition,
+  },
+  get_transactions: {
+    description:
+      "List trade transactions (buys/sells) with optional ticker, asset_class, " +
+      "and date-range filters. Returns up to `limit` rows sorted by trade_date " +
+      "DESC, with amounts in BRL. Zero outbound HTTP. Read-only.",
+    schema: getTransactionsSchema,
+    handler: getTransactions,
+  },
+  get_dividends: {
+    description:
+      "List dividend/JCP payouts with optional ticker, asset_class, kind, and " +
+      "date-range filters. Returns up to `limit` rows sorted by pay_date DESC, " +
+      "with gross/tax/net in BRL. Zero outbound HTTP. Read-only.",
+    schema: getDividendsSchema,
+    handler: getDividends,
   },
 } as const;
 
