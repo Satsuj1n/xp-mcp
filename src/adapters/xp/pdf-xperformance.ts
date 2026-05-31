@@ -90,7 +90,8 @@ export async function parseXPerformancePdf(
  * total, the POSIÇÃO DETALHADA line walk, per-asset parsing, and warnings.
  */
 export function parseXPerformanceText(text: string): XPerformanceParseResult {
-  // ── Reference date (last "Data de Referência: DD/MM/YYYY" on the cover) ──
+  // ── Reference date: the first DD/MM/YYYY that follows the "Data de
+  //    Referência" label (the lazy match stops at the first date after it). ──
   const refDateMatch = text.match(
     /Data de Refer[êe]ncia[\s\S]*?(\d{2})\/(\d{2})\/(\d{4})/,
   );
