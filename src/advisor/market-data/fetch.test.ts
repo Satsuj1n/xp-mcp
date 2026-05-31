@@ -1,7 +1,11 @@
 import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { fetchWithRetry } from "./fetch.js";
-import { UpstreamRateLimitError, UpstreamTimeoutError } from "../errors.js";
+import {
+  UpstreamHttpError,
+  UpstreamRateLimitError,
+  UpstreamTimeoutError,
+} from "../errors.js";
 
 type FetchFn = typeof globalThis.fetch;
 let originalFetch: FetchFn;
@@ -78,4 +82,13 @@ test("throws on non-429 non-OK without retry", async () => {
     (e: unknown) => e instanceof Error && /HTTP 404/.test(e.message),
   );
   assert.equal(calls, 1, "404 should not retry");
+});
+
+test("throws UpstreamHttpError carrying the numeric status on 4xx", async () => {
+  globalThis.fetch = (async () =>
+    new Response("not found", { status: 404 })) as FetchFn;
+  await assert.rejects(
+    fetchWithRetry("https://example/x", { max_retries: 0 }),
+    (e: unknown) => e instanceof UpstreamHttpError && e.status === 404,
+  );
 });
