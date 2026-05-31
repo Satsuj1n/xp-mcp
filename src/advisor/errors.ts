@@ -47,6 +47,22 @@ export class UpstreamTimeoutError extends AdvisorError {
   override readonly recoverable = true;
 }
 
+/**
+ * A non-2xx, non-429 HTTP response from an upstream API. Carries the numeric
+ * `status` so callers can branch on it (e.g. map 4xx → TickerNotFoundError)
+ * without parsing the human-readable message. `recoverable` stays false to
+ * preserve the existing multi-source fall-through behavior.
+ */
+export class UpstreamHttpError extends AdvisorError {
+  readonly code = "UPSTREAM_HTTP";
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message);
+  }
+}
+
 export class TickerNotFoundError extends AdvisorError {
   readonly code = "TICKER_NOT_FOUND";
   constructor(public readonly ticker: string) {

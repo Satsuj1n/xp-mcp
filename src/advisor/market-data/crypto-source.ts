@@ -1,4 +1,8 @@
-import { AdvisorError, TickerNotFoundError } from "../errors.js";
+import {
+  AdvisorError,
+  TickerNotFoundError,
+  UpstreamHttpError,
+} from "../errors.js";
 import { fetchWithRetry } from "./fetch.js";
 
 export interface CryptoQuote {
@@ -291,13 +295,11 @@ function isFallthroughError(err: unknown): boolean {
 }
 
 /**
- * fetchWithRetry signals non-2xx (non-429) as `Error("HTTP <status> for <url>")`.
- * Detects a 4xx client error so callers can map it to TickerNotFoundError.
+ * Detects a 4xx client error from fetchWithRetry's typed `UpstreamHttpError`
+ * so callers can map it to TickerNotFoundError.
  */
 function isHttpClientError(err: unknown): boolean {
-  if (!(err instanceof Error)) return false;
-  const m = /^HTTP (\d{3}) for /.exec(err.message);
-  if (!m) return false;
-  const status = Number(m[1]);
-  return status >= 400 && status < 500;
+  return (
+    err instanceof UpstreamHttpError && err.status >= 400 && err.status < 500
+  );
 }

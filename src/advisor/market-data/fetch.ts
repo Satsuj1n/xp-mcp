@@ -1,4 +1,8 @@
-import { UpstreamRateLimitError, UpstreamTimeoutError } from "../errors.js";
+import {
+  UpstreamHttpError,
+  UpstreamRateLimitError,
+  UpstreamTimeoutError,
+} from "../errors.js";
 
 export interface FetchWithRetryOpts {
   timeout_ms?: number;
@@ -79,7 +83,7 @@ export async function fetchWithRetry(
     }
 
     if (!res.ok) {
-      throw new Error(`HTTP ${res.status} for ${url}`);
+      throw new UpstreamHttpError(`HTTP ${res.status} for ${url}`, res.status);
     }
 
     return await res.json();
