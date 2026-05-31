@@ -31,6 +31,7 @@ export class MarketDataCache {
           WHERE ticker = ?
             AND data_type = ?
             AND cached_at > datetime('now', ?)
+          ORDER BY cached_at DESC
           LIMIT 1`,
       )
       .get(ticker, dataType, `-${maxAgeMinutes} minutes`) as Row | undefined;

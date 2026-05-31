@@ -105,3 +105,27 @@ test("clearExpired removes only expired rows and returns count", () => {
     ["B"],
   );
 });
+
+test("get returns the freshest row when multiple sources cache the same pair", () => {
+  const db = makeDb();
+  const cache = new MarketDataCache(db);
+  // Two crypto sources cache the same (ticker, data_type) pair under distinct
+  // `source` values, so both rows coexist. Insert the OLDER row first (lower
+  // rowid): without ORDER BY, `LIMIT 1` would return it by insertion order.
+  db.prepare(
+    `INSERT INTO market_data_cache (ticker, data_type, source, payload_json, cached_at)
+     VALUES (?, ?, 'foxbit', ?, datetime('now', '-10 minutes'))`,
+  ).run("BTC", "crypto_quote", JSON.stringify({ price_brl: 100 }));
+  db.prepare(
+    `INSERT INTO market_data_cache (ticker, data_type, source, payload_json, cached_at)
+     VALUES (?, ?, 'binance', ?, datetime('now', '-1 minutes'))`,
+  ).run("BTC", "crypto_quote", JSON.stringify({ price_brl: 200 }));
+
+  const entry = cache.get<{ price_brl: number }>("BTC", "crypto_quote", 60);
+  assert.ok(entry);
+  assert.equal(
+    entry.data.price_brl,
+    200,
+    "expected the freshest row (binance, -1min), not an arbitrary one",
+  );
+});
